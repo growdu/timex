@@ -388,10 +388,18 @@
 重点不是简单缩放，而是重做移动端信息层级和跳转方式。
 
 ### 10.2 React/Vite 正式前端骨架
-当前这版适合原型验证，不适合正式迭代。工程化建议：
+当前仓库已经新增 [frontend](/Users/growduduan/ai/timex/frontend) 目录，作为 React/Vite 正式前端骨架起点。它已经包含：
 
-- 新建 `frontend/` 或 `apps/web/`
-- 用 React + Vite 重建路由
+- Vite 工程入口
+- React Router 路由结构
+- 登录页与 7 个业务页面骨架
+- `localStorage` 会话与 UI 状态模拟
+- 静态 mock 数据层
+
+后续工程化建议：
+
+- 以现有 `frontend/` 为基础继续迭代
+- 细化 React Router 页面状态和数据流
 - 将静态数据迁移为 mock service
 - 将当前页面拆分为组件、布局和数据层
 

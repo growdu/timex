@@ -5,3 +5,25 @@ Thumbs.db
 *.swp
 *.swo
 *~
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Env
+.env
+.env.*
+
+# Node / frontend
+node_modules/
+dist/
+build/
+.vite/
+coverage/
+
+# IDE
+.idea/
+.vscode/

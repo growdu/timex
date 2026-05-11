@@ -1,0 +1,100 @@
+import { useEffect } from "react";
+import { Link, useParams } from "react-router-dom";
+
+export default function PlacePage({
+  Layout,
+  session,
+  uiState,
+  filteredEvents,
+  setUiState,
+  logout,
+  api,
+  data,
+}) {
+  const { placeId } = useParams();
+  const place = api.getPlace(placeId) || data.places[0];
+  const placeEvents = filteredEvents.filter((item) => item.placeId === place.id);
+  const leadEvent = placeEvents[0] || data.events.find((item) => item.placeId === place.id) || data.events[0];
+  const leadPerson = api.getPerson(leadEvent.people[0]);
+
+  useEffect(() => {
+    setUiState({
+      selectedPlaceId: place.id,
+      selectedEventId: leadEvent.id,
+      selectedPersonId: leadPerson.id,
+    });
+  }, [leadEvent.id, leadPerson.id, place.id, setUiState]);
+
+  const detailLinks = {
+    event: `/events/${leadEvent.id}`,
+    place: `/places/${place.id}`,
+    person: `/people/${leadPerson.id}/detail`,
+  };
+
+  return (
+    <Layout
+      activeNav="space"
+      session={session}
+      uiState={uiState}
+      filteredEvents={filteredEvents}
+      onUiStateChange={setUiState}
+      onLogout={logout}
+      detailLinks={detailLinks}
+      pageNotice="当前停留在地点详情页。地点被提升为可独立承载时间切片和人物关系的档案页面。"
+      rightRail={
+        <section className="panel-card">
+          <div className="panel-title">
+            <div>
+              <span className="section-eyebrow">Place Snapshot</span>
+              <h2>{place.name} 速览</h2>
+            </div>
+          </div>
+          <div className="cluster-card">
+            <strong>{place.summary}</strong>
+            <p>当前地点下共有 {placeEvents.length} 条事件。</p>
+          </div>
+        </section>
+      }
+    >
+      <section className="hero-card">
+        <div className="hero-copy">
+          <span className="section-eyebrow">Place Detail Page</span>
+          <h2>{place.name} 的完整地点档案</h2>
+          <p>{place.summary}</p>
+          <div className="detail-grid">
+            <div className="detail-box"><span>地点类型</span><strong>{place.type}</strong></div>
+            <div className="detail-box"><span>事件数量</span><strong>{placeEvents.length}</strong></div>
+            <div className="detail-box"><span>首次出现</span><strong>{place.firstSeen}</strong></div>
+            <div className="detail-box"><span>最近出现</span><strong>{place.latestSeen}</strong></div>
+          </div>
+        </div>
+      </section>
+
+      <section className="panel-card">
+        <div className="panel-title">
+          <div>
+            <span className="section-eyebrow">Place Timeline</span>
+            <h2>{place.name} 的时间切片</h2>
+          </div>
+          <Link className="mini-link" to="/space">返回空间总览</Link>
+        </div>
+        <div className="card-list">
+          {placeEvents.map((event) => (
+            <article key={event.id} className="event-card">
+              <div className="event-card-main">
+                <span className="event-location">{event.location}</span>
+                <h3>{event.title}</h3>
+                <p className="event-meta">{event.date} · {api.getStageLabel(event.stage)}</p>
+                <p>{event.summary}</p>
+              </div>
+              <div className="event-card-side">
+                <span className="pill-count">{api.getMediaTotal(event)} 份</span>
+                <Link className="mini-link" to={`/events/${event.id}`}>查看详情</Link>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+    </Layout>
+  );
+}
