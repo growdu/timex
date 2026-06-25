@@ -1,181 +1,215 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import AppLayout from "./components/AppLayout.jsx";
 import EventPage from "./pages/EventPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
+import LicensePage from "./pages/LicensePage.jsx";
 import MemoirPage from "./pages/MemoirPage.jsx";
 import PeoplePage from "./pages/PeoplePage.jsx";
 import PersonPage from "./pages/PersonPage.jsx";
 import PlacePage from "./pages/PlacePage.jsx";
 import SpacePage from "./pages/SpacePage.jsx";
 import TimelinePage from "./pages/TimelinePage.jsx";
-import { createApi, defaultUiState, filterEvents, timexData } from "./mock/timexData";
+import { authApi } from "./api/auth";
+import { useAuthStore, useUIStore } from "./store";
 
-const SESSION_STORAGE_KEY = "timexFrontendSession";
-const UI_STATE_STORAGE_KEY = "timexFrontendUiState";
-const api = createApi(timexData);
+// TanStack Query hooks
+export function useAuth() {
+  const { data: user, isLoading, error } = useQuery({
+    queryKey: ['auth', 'me'],
+    queryFn: authApi.getProfile,
+    enabled: authApi.isAuthenticated(),
+    retry: false,
+  });
 
-function readStorage(key, fallback) {
-  try {
-    const raw = window.localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
-  } catch {
-    return fallback;
+  return { user, isLoading, error, isAuthenticated: !!user };
+}
+
+export function useEvents(options = {}) {
+  return useQuery({
+    queryKey: ['events', options],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (options.year) params.append('year', options.year);
+      if (options.stage) params.append('stage', options.stage);
+      if (options.keyword) params.append('keyword', options.keyword);
+      if (options.page) params.append('page', options.page);
+      if (options.limit) params.append('limit', options.limit);
+      return fetch(`/api/events?${params}`).then(r => r.json());
+    },
+    enabled: authApi.isAuthenticated(),
+  });
+}
+
+export function useTimeline(options = {}) {
+  return useQuery({
+    queryKey: ['events', 'timeline', options],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (options.startYear) params.append('startYear', options.startYear);
+      if (options.endYear) params.append('endYear', options.endYear);
+      return fetch(`/api/events/timeline?${params}`).then(r => r.json());
+    },
+    enabled: authApi.isAuthenticated(),
+  });
+}
+
+export function usePeople() {
+  return useQuery({
+    queryKey: ['people'],
+    queryFn: () => fetch('/api/people').then(r => r.json()),
+    enabled: authApi.isAuthenticated(),
+  });
+}
+
+export function usePlaces() {
+  return useQuery({
+    queryKey: ['places'],
+    queryFn: () => fetch('/api/places').then(r => r.json()),
+    enabled: authApi.isAuthenticated(),
+  });
+}
+
+export function useMemoirs() {
+  return useQuery({
+    queryKey: ['memoirs'],
+    queryFn: () => fetch('/api/memoirs').then(r => r.json()),
+    enabled: authApi.isAuthenticated(),
+  });
+}
+
+export function useLogin() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: authApi.login,
+    onSuccess: (data) => {
+      if (data.tokens) {
+        localStorage.setItem('timex_access_token', data.tokens.accessToken);
+        localStorage.setItem('timex_refresh_token', data.tokens.refreshToken);
+      }
+      queryClient.invalidateQueries({ queryKey: ['auth'] });
+    },
+  });
+}
+
+export function useLogout() {
+  const queryClient = useQueryClient();
+  return useCallback(() => {
+    authApi.logout();
+    queryClient.clear();
+  }, [queryClient]);
+}
+
+function ProtectedRoute({ children }) {
+  const { isAuthenticated, isLoading } = useAuth();
+  const uiState = useUIStore();
+
+  if (isLoading) {
+    return <div className="loading-screen">加载中...</div>;
   }
-}
 
-function writeStorage(key, value) {
-  window.localStorage.setItem(key, JSON.stringify(value));
-}
-
-function ProtectedRoute({ session, children }) {
-  if (!session) {
+  if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
+
   return children;
 }
 
-function createSharedProps({ session, uiState, filteredEvents, setUiState, logout }) {
-  const selectedEvent =
-    filteredEvents.find((item) => item.id === uiState.selectedEventId) ||
-    api.getEvent(uiState.selectedEventId) ||
-    filteredEvents[0] ||
-    timexData.events[0];
-  const selectedPlace = api.getPlace(uiState.selectedPlaceId) || api.getPlace(selectedEvent.placeId);
-  const selectedPerson =
-    api.getPerson(uiState.selectedPersonId) || api.getPerson(selectedEvent.people[0]);
-
-  return {
-    session,
-    uiState,
-    filteredEvents,
-    setUiState,
-    logout,
-    api,
-    data: timexData,
-    selectedEvent,
-    selectedPlace,
-    selectedPerson,
-    Layout: AppLayout,
-  };
-}
-
 export default function App() {
-  const [session, setSession] = useState(() => readStorage(SESSION_STORAGE_KEY, null));
-  const [uiState, setUiStateState] = useState(() => ({
-    ...defaultUiState,
-    ...readStorage(UI_STATE_STORAGE_KEY, {}),
-  }));
+  const { user, isAuthenticated } = useAuth();
+  const { mutate: login } = useLogin();
+  const logout = useLogout();
+  const uiState = useUIStore();
 
-  useEffect(() => {
-    if (session) {
-      writeStorage(SESSION_STORAGE_KEY, session);
-    } else {
-      window.localStorage.removeItem(SESSION_STORAGE_KEY);
-    }
-  }, [session]);
-
-  useEffect(() => {
-    writeStorage(UI_STATE_STORAGE_KEY, uiState);
-  }, [uiState]);
-
-  const filteredEvents = useMemo(() => filterEvents(timexData.events, api, uiState), [uiState]);
-
-  const setUiState = useCallback((patch) => {
-    setUiStateState((current) => ({ ...current, ...patch }));
-  }, []);
-
-  const login = useCallback((account) => {
-    setSession({
-      id: account.id,
-      name: account.name,
-      role: account.role,
-      email: account.email,
-      tone: account.tone,
-      loginAt: new Date().toISOString(),
-    });
-    setUiStateState(defaultUiState);
-  }, []);
-
-  const logout = useCallback(() => {
-    setSession(null);
-  }, []);
-
-  const sharedProps = createSharedProps({
-    session,
-    uiState,
-    filteredEvents,
-    setUiState,
-    logout,
-  });
+  const handleLogin = useCallback((email, password) => {
+    login({ email, password });
+  }, [login]);
 
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Navigate to={session ? "/timeline" : "/login"} replace />} />
+        <Route path="/" element={<Navigate to={isAuthenticated ? "/timeline" : "/login"} replace />} />
+
         <Route
           path="/login"
           element={
-            session ? (
+            isAuthenticated ? (
               <Navigate to="/timeline" replace />
             ) : (
-              <LoginPage accounts={timexData.accounts} onLogin={login} />
+              <LoginPage onLogin={handleLogin} />
             )
           }
         />
+
         <Route
           path="/timeline"
           element={
-            <ProtectedRoute session={session}>
-              <TimelinePage {...sharedProps} />
+            <ProtectedRoute>
+              <TimelinePage user={user} uiState={uiState} logout={logout} />
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/space"
           element={
-            <ProtectedRoute session={session}>
-              <SpacePage {...sharedProps} />
+            <ProtectedRoute>
+              <SpacePage user={user} uiState={uiState} logout={logout} />
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/people"
           element={
-            <ProtectedRoute session={session}>
-              <PeoplePage {...sharedProps} />
+            <ProtectedRoute>
+              <PeoplePage user={user} uiState={uiState} logout={logout} />
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/memoir"
           element={
-            <ProtectedRoute session={session}>
-              <MemoirPage {...sharedProps} />
+            <ProtectedRoute>
+              <MemoirPage user={user} uiState={uiState} logout={logout} />
             </ProtectedRoute>
           }
         />
+
+        <Route
+          path="/license"
+          element={
+            <ProtectedRoute>
+              <LicensePage user={user} />
+            </ProtectedRoute>
+          }
+        />
+
         <Route
           path="/events/:eventId"
           element={
-            <ProtectedRoute session={session}>
-              <EventPage {...sharedProps} />
+            <ProtectedRoute>
+              <EventPage user={user} uiState={uiState} logout={logout} />
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/places/:placeId"
           element={
-            <ProtectedRoute session={session}>
-              <PlacePage {...sharedProps} />
+            <ProtectedRoute>
+              <PlacePage user={user} uiState={uiState} logout={logout} />
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/people/:personId/detail"
           element={
-            <ProtectedRoute session={session}>
-              <PersonPage {...sharedProps} />
+            <ProtectedRoute>
+              <PersonPage user={user} uiState={uiState} logout={logout} />
             </ProtectedRoute>
           }
         />

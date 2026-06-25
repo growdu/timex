@@ -1,21 +1,23 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 
-export default function LoginPage({ accounts, onLogin }) {
-  const navigate = useNavigate();
-  const [email, setEmail] = useState(accounts[0]?.email || "");
-  const [password, setPassword] = useState("timex2026");
+export default function LoginPage({ onLogin }) {
+  const [email, setEmail] = useState("demo@timex.com");
+  const [password, setPassword] = useState("password123");
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    const account = accounts.find((item) => item.email === email && item.password === password);
-    if (!account) {
-      setError("账号或密码不匹配，请使用测试账号。");
-      return;
+    setError("");
+    setIsLoading(true);
+
+    try {
+      await onLogin(email, password);
+    } catch (err) {
+      setError(err.message || "登录失败，请检查账号密码");
+    } finally {
+      setIsLoading(false);
     }
-    onLogin(account);
-    navigate("/timeline");
   };
 
   return (
@@ -24,16 +26,16 @@ export default function LoginPage({ accounts, onLogin }) {
         <div className="brand">
           <div className="brand-mark">时</div>
           <div>
-            <h1>时光机器 Frontend</h1>
-            <p>React/Vite 工程骨架 · 静态测试数据演示版</p>
+            <h1>时光机器</h1>
+            <p>个人成长记录与人生回忆沉淀系统</p>
           </div>
         </div>
 
         <div className="auth-hero">
-          <span className="section-eyebrow">Prototype Access</span>
-          <h2>先登录，再进入你的时间、空间、人物记忆工作台。</h2>
+          <span className="section-eyebrow">Welcome Back</span>
+          <h2>记录你的成长，沉淀你的回忆。</h2>
           <p>
-            这一步不接真实后端，只模拟正式产品的入口形态、会话状态和不同类型用户的工作场景。
+            登录后进入你的时间、空间、人物记忆工作台。多维度回顾人生每一个重要时刻。
           </p>
           <div className="auth-feature-grid">
             <div className="auth-feature">
@@ -45,7 +47,7 @@ export default function LoginPage({ accounts, onLogin }) {
               <span>事件、地点、人物都有独立路由</span>
             </div>
             <div className="auth-feature">
-              <strong>更细的回忆录编辑器</strong>
+              <strong>回忆录编辑器</strong>
               <span>章节树、正文区、来源库同时展开</span>
             </div>
           </div>
@@ -55,15 +57,20 @@ export default function LoginPage({ accounts, onLogin }) {
       <section className="auth-panel">
         <div className="auth-card">
           <span className="section-eyebrow">Sign In</span>
-          <h2>登录演示账号</h2>
+          <h2>登录账号</h2>
           <p className="auth-note">
-            任意一个测试账号都能进入完整原型。密码统一为 <code>timex2026</code>。
+            使用你的邮箱和密码登录。开发模式下可使用测试账号。
           </p>
 
           <form className="auth-form" onSubmit={handleSubmit}>
             <label className="auth-field">
               <span>邮箱</span>
-              <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" />
+              <input
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                type="email"
+                placeholder="your@email.com"
+              />
             </label>
             <label className="auth-field">
               <span>密码</span>
@@ -71,10 +78,15 @@ export default function LoginPage({ accounts, onLogin }) {
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 type="password"
+                placeholder="Enter password"
               />
             </label>
-            <button className="primary-button auth-submit" type="submit">
-              进入原型
+            <button
+              className="primary-button auth-submit"
+              type="submit"
+              disabled={isLoading}
+            >
+              {isLoading ? "登录中..." : "登录"}
             </button>
             {error ? <p className="auth-error">{error}</p> : null}
           </form>
@@ -83,30 +95,27 @@ export default function LoginPage({ accounts, onLogin }) {
         <div className="auth-card">
           <div className="panel-title">
             <div>
-              <span className="section-eyebrow">Demo Accounts</span>
-              <h2>一键登录</h2>
+              <span className="section-eyebrow">Demo Mode</span>
+              <h2>测试账号</h2>
             </div>
           </div>
 
           <div className="demo-account-list">
-            {accounts.map((account) => (
-              <button
-                key={account.id}
-                className="demo-account"
-                type="button"
-                onClick={() => {
-                  onLogin(account);
-                  navigate("/timeline");
-                }}
-              >
-                <div className="demo-account-top">
-                  <strong>{account.name}</strong>
-                  <span>{account.role}</span>
-                </div>
-                <p>{account.summary}</p>
-                <small>{account.email}</small>
-              </button>
-            ))}
+            <button
+              className="demo-account"
+              type="button"
+              onClick={() => {
+                setEmail("demo@timex.com");
+                setPassword("password123");
+              }}
+            >
+              <div className="demo-account-top">
+                <strong>演示账号</strong>
+                <span>完整功能体验</span>
+              </div>
+              <p>包含完整的时间线、人物、地点示例数据</p>
+              <small>demo@timex.com</small>
+            </button>
           </div>
         </div>
       </section>

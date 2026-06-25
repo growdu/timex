@@ -648,3 +648,194 @@ button {
     grid-template-columns: 1fr;
   }
 }
+
+/* Settings & License Page */
+.settings-page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.settings-header {
+  margin-bottom: 32px;
+}
+
+.settings-header h1 {
+  font-size: 28px;
+  margin: 0 0 8px 0;
+}
+
+.settings-header p {
+  color: var(--muted);
+  margin: 0;
+}
+
+.settings-section {
+  background: var(--paper);
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.settings-section h2 {
+  font-size: 18px;
+  margin: 0 0 16px 0;
+}
+
+.license-form {
+  display: flex;
+  gap: 12px;
+}
+
+.license-input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.license-input:focus {
+  outline: none;
+  border-color: var(--teal);
+}
+
+.license-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: rgba(46, 138, 131, 0.1);
+  border-radius: var(--radius-md);
+  margin-top: 16px;
+}
+
+.license-plan {
+  font-size: 20px;
+  font-weight: bold;
+  color: var(--teal);
+}
+
+.trial-notice {
+  padding: 16px;
+  background: rgba(214, 167, 87, 0.15);
+  border-radius: var(--radius-md);
+  margin-top: 16px;
+}
+
+.trial-notice strong {
+  color: var(--amber);
+}
+
+.device-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.device-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: var(--radius-md);
+}
+
+.device-info strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.device-info p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.danger-button {
+  padding: 8px 16px;
+  background: rgba(180, 106, 76, 0.15);
+  color: var(--rust);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.danger-button:hover {
+  background: rgba(180, 106, 76, 0.25);
+}
+
+.pricing-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.pricing-card {
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+
+.pricing-card h3 {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+}
+
+.pricing-card .price {
+  font-size: 28px;
+  font-weight: bold;
+  color: var(--teal);
+  margin: 0 0 16px 0;
+}
+
+.pricing-card ul {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px 0;
+  text-align: left;
+}
+
+.pricing-card li {
+  padding: 6px 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.pricing-card li:before {
+  content: "✓ ";
+  color: var(--teal);
+}
+
+.error-message {
+  color: var(--rust);
+  margin-top: 12px;
+  font-size: 14px;
+}
+
+.success-message {
+  color: var(--teal);
+  margin-top: 12px;
+  font-size: 14px;
+}
+
+.empty-state {
+  padding: 24px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.loading-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  font-size: 18px;
+  color: var(--muted);
+}

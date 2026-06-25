@@ -1,0 +1,8 @@
+export { default as api } from './client';
+export { default as authApi } from './auth';
+export { default as licenseApi } from './license';
+export { default as eventsApi } from './events';
+export { default as momentsApi } from './moments';
+export { default as peopleApi } from './people';
+export { default as placesApi } from './places';
+export { default as memoirsApi } from './memoirs';

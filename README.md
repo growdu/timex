@@ -1,80 +1,106 @@
-# 时光机器
+# 时光机器 - 个人成长记录系统
 
-时光机器是一款面向个人成长记录与人生回忆沉淀的多模态时间档案产品，支持图片、视频、语音、文字的记录、实时采集与历史导入，并通过时间、空间、人物三条主轴进行立体展示。
+一款面向个人成长记录与人生回忆沉淀的多模态时间档案产品。
 
-## 项目定位
+## 🚀 快速开始
 
-时光机器不是单纯的相册、网盘或笔记工具，而是一个帮助用户持续记录、自动整理、长期回顾并最终沉淀为成长录或回忆录的记忆系统。
+### 1. 启动数据库服务
 
-产品核心价值包括：
+```bash
+docker-compose up -d
+```
 
-- 多模态记录：统一承载图片、视频、语音、文字。
-- 实时采集：支持连续记录一个事件或一个人生阶段。
-- 历史导入：把已有素材补齐到个人时间线中。
-- 立体展现：从时间、空间、人物三个维度重组内容。
-- 长期沉淀：支持形成成长录、阶段总结和回忆录。
+这将启动 PostgreSQL 和 Redis 服务。
 
-## 当前文档
+### 2. 启动后端
 
-- [产品文档](docs/product.md)
-- [设计文档](docs/design.md)
-- [Web 原型文档](docs/web-prototype.md)
+```bash
+cd backend
+npm install
+npm run start:dev
+```
 
-## 文档说明
+后端服务将运行在 http://localhost:3000
 
-`docs/product.md` 主要描述产品定义、目标用户、核心场景、功能范围、信息架构和 MVP。
+### 3. 启动前端（开发模式）
 
-`docs/design.md` 主要描述设计目标、页面结构、核心组件、交互规则、双端布局和状态设计。
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-`docs/web-prototype.md` 主要描述 `web-test` 原型的登录体系、多页面结构、测试数据、交互范围、运行方式和后续演进方向。
+前端服务将运行在 http://localhost:5173
 
-## 当前 Web 原型
+### 4. 打开浏览器
 
-当前原型位于 [web-test](/Users/growduduan/ai/timex/web-test)，已经是登录驱动的多页面版本，使用静态测试数据进行页面原型展示。
+访问 http://localhost:5173 即可体验。
 
-当前包含页面：
+## 📁 项目结构
 
-- [登录页](web-test/login.html)
-- [时间线页](web-test/timeline.html)
-- [空间页](web-test/space.html)
-- [人物页](web-test/people.html)
-- [回忆录页](web-test/memoir.html)
-- [事件详情页](web-test/event.html)
-- [地点详情页](web-test/place.html)
-- [人物详情页](web-test/person.html)
+```
+timex/
+├── backend/                 # NestJS 后端
+│   ├── src/
+│   │   ├── auth/          # 认证模块
+│   │   ├── users/         # 用户模块
+│   │   ├── license/       # License授权模块
+│   │   ├── devices/       # 设备管理模块
+│   │   ├── events/        # 事件模块
+│   │   ├── moments/       # 瞬间/素材模块
+│   │   ├── people/        # 人物模块
+│   │   ├── places/        # 地点模块
+│   │   ├── memoirs/       # 回忆录模块
+│   │   └── config/        # 配置模块
+│   └── .env.example       # 环境变量示例
+│
+├── frontend/               # React + Vite 前端
+│   ├── src/
+│   │   ├── api/          # API 调用层
+│   │   ├── store/        # Zustand 状态管理
+│   │   ├── mocks/        # MSW Mock 服务
+│   │   ├── pages/        # 页面组件
+│   │   └── components/   # 通用组件
+│   └── index.html
+│
+├── docs/                  # 产品设计文档
+│   ├── product.md        # 产品定义
+│   ├── design.md         # 设计文档
+│   └── web-prototype.md  # Web原型说明
+│
+├── web-test/             # 高保真静态原型
+└── docker-compose.yml     # 数据库服务配置
+```
 
-当前原型重点验证：
+## 💡 商业模式
 
-- 登录入口与会话状态
-- 时间、空间、人物、回忆录四个一级视图
-- 事件、地点、人物的多页面详情结构
-- 更细的回忆录编辑器工作台
+| 类型 | 说明 |
+|------|------|
+| **License买断** | Lifetime 一次性买断（¥399-599），Annual 年费（¥99/年） |
+| **增值服务** | 打印相册、定制印刷、高级模板、AI增强包 |
+| **试用机制** | 14天全功能Trial |
 
-## React/Vite 骨架
+## 🔑 核心API
 
-当前仓库还新增了 [frontend](/Users/growduduan/ai/timex/frontend) 目录，作为正式前端工程骨架起点。
+### 认证
+- `POST /api/auth/register` - 注册
+- `POST /api/auth/login` - 登录
+- `GET /api/auth/me` - 获取用户信息
 
-当前骨架包含：
+### License
+- `POST /api/license/activate` - 激活License
+- `GET /api/license/status` - 获取License状态
+- `GET /api/license/devices` - 获取已注册设备
 
-- Vite 工程入口
-- React Router 多页面路由
-- 登录态和 UI 状态的 `localStorage` 模拟
-- 静态 mock 数据
-- 对应的 8 个页面骨架
+### 内容
+- `GET /api/events` - 获取事件列表
+- `GET /api/events/timeline` - 获取时间线
+- `GET /api/people` - 获取人物列表
+- `GET /api/places` - 获取地点列表
+- `GET /api/memoirs` - 获取回忆录列表
 
-这套骨架的目标不是替代 `web-test` 的高保真原型，而是承接它，作为后续真实前端开发的起点。
+## 🛠️ 技术栈
 
-## 后续建议
-
-可以继续补充以下文档：
-
-- 线框文档
-- 页面字段清单
-- 用户故事与验收标准
-- 技术方案文档
-- 数据模型文档
-
-当前原型的下一阶段建议包括：
-
-- 可点击的移动端适配页
-- 继续完善 React/Vite 版正式前端骨架
+**后端**: NestJS + TypeORM + PostgreSQL + Redis
+**前端**: React 18 + Vite + React Router + Zustand + TanStack Query + MSW
+**存储**: 阿里云OSS（生产环境）
