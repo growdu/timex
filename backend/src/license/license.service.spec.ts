@@ -132,6 +132,15 @@ describe('LicenseService', () => {
         service.activateLicense('user-1', activateDto),
       ).rejects.toThrow(BadRequestException);
     });
+
+    it('should throw BadRequestException if device limit is reached', async () => {
+      licensesRepository.findOne.mockResolvedValue(mockLicense);
+      devicesRepository.count.mockResolvedValue(mockLicense.deviceLimit);
+
+      await expect(
+        service.activateLicense('user-1', activateDto),
+      ).rejects.toThrow(BadRequestException);
+    });
   });
 
   describe('getLicenseStatus', () => {

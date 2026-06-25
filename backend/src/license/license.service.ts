@@ -61,6 +61,13 @@ export class LicenseService {
       where: { licenseId: license.id },
     });
 
+    // Check device limit before creating new device
+    if (currentDevices >= license.deviceLimit) {
+      throw new BadRequestException(
+        `Device limit reached (${license.deviceLimit} devices). Please deactivate a device before adding a new one.`,
+      );
+    }
+
     // Register new device
     const device = this.devicesRepository.create({
       userId,
