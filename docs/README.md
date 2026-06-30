@@ -28,7 +28,7 @@ title: 时光机器文档
 ### 已有文档（散文 / 长文）
 - [产品文档](./product.md) — 产品定义、用户、问题、需求
 - [设计文档](./design.md) — 信息架构、组件、交互、视觉
-- [Web 原型文档](./web-prototype.md) — `web-test/` 静态原型的设计说明
+- [Web 原型归档说明（v0.1）](./web-prototype-archive.md) — 静态原型 web-test/ 已被 React/Vite 取代，归档记录
 
 ## 阅读顺序建议
 
