@@ -13,6 +13,7 @@ import { MomentsModule } from './moments/moments.module';
 import { PeopleModule } from './people/people.module';
 import { PlacesModule } from './places/places.module';
 import { MemoirsModule } from './memoirs/memoirs.module';
+import { UploadModule } from './upload/upload.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { MemoirsModule } from './memoirs/memoirs.module';
     PeopleModule,
     PlacesModule,
     MemoirsModule,
+    UploadModule,
   ],
   controllers: [AppController],
   providers: [AppService],
