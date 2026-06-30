@@ -1,8 +1,9 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 
 export default function LoginPage({ onLogin }) {
   const [email, setEmail] = useState("demo@timex.com");
-  const [password, setPassword] = useState("password123");
+  const [password, setPassword] = useState("demo123");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -90,6 +91,10 @@ export default function LoginPage({ onLogin }) {
             </button>
             {error ? <p className="auth-error">{error}</p> : null}
           </form>
+
+          <p className="auth-note" style={{ marginTop: 16 }}>
+            还没有账号？<Link to="/register">免费注册一个</Link>
+          </p>
         </div>
 
         <div className="auth-card">
@@ -106,15 +111,47 @@ export default function LoginPage({ onLogin }) {
               type="button"
               onClick={() => {
                 setEmail("demo@timex.com");
-                setPassword("password123");
+                setPassword("demo123");
               }}
             >
               <div className="demo-account-top">
-                <strong>演示账号</strong>
-                <span>完整功能体验</span>
+                <strong>demo · 时光记录者</strong>
+                <span>创业 · 旅行 · 家庭</span>
               </div>
               <p>包含完整的时间线、人物、地点示例数据</p>
-              <small>demo@timex.com</small>
+              <small>demo@timex.com / demo123</small>
+            </button>
+
+            <button
+              className="demo-account"
+              type="button"
+              onClick={() => {
+                setEmail("maker@timex.test");
+                setPassword("timex2026");
+              }}
+            >
+              <div className="demo-account-top">
+                <strong>maker · 周屿</strong>
+                <span>城市迁移型创作者</span>
+              </div>
+              <p>北京 → 杭州 → 深圳，记录三段城市迁移与同行者</p>
+              <small>maker@timex.test / timex2026</small>
+            </button>
+
+            <button
+              className="demo-account"
+              type="button"
+              onClick={() => {
+                setEmail("family@timex.test");
+                setPassword("timex2026");
+              }}
+            >
+              <div className="demo-account-top">
+                <strong>family · 沈棠</strong>
+                <span>家庭档案整理者</span>
+              </div>
+              <p>小满的出生、入学、夏令营，三代人的家庭相册</p>
+              <small>family@timex.test / timex2026</small>
             </button>
           </div>
         </div>

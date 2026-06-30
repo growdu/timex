@@ -240,20 +240,28 @@ INSERT INTO people (id, user_id, name, role, intro, first_seen_at, latest_seen_a
 VALUES
   ('c1eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', '张三', '联合创始人', '技术大牛，负责产品研发', '2024-01-01', '2024-12-31'),
   ('c2eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', '女儿小雨', '家人', '2024年6月出生', '2024-06-01', '2024-12-31'),
-  ('c3eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', '李四', '大学同学', '10年老友', '2024-01-01', '2024-12-31');
+  ('c3eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', '李四', '大学同学', '10年老友', '2024-01-01', '2024-12-31'),
+  ('c4eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', '王芳', '恋人', '认识两年，相互扶持', '2024-02-01', '2024-12-31'),
+  ('c5eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', '赵明', '同事', '前公司的设计同事', '2024-01-01', '2024-12-31');
 
 -- 插入测试事件
 INSERT INTO events (id, user_id, title, date, location, place_id, stage, summary, long_text, weight)
 VALUES
   ('d1eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', '第一次创业会议', '2024-01-15', '北京中关村', 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'maker', '和团队讨论了产品方向和商业模式', '今天和几位联合创始人进行了第一次正式的产品讨论，确定了以个人成长记录为核心的产品方向。', 10),
   ('d2eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', '西藏自驾之旅', '2024-03-20', '西藏拉萨', 'b2eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'maker', '从成都出发，一路向西，直达拉萨', '自驾游从成都出发，沿着318国道一路向西，穿越二郎山、折多山、高尔寺山、剪子弯山、卡子拉山，终于抵达拉萨。', 8),
-  ('d3eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', '女儿出生', '2024-06-01', '北京协和医院', 'b3eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'family', '小公主来到这个世界，7斤2两，母女平安', '女儿小雨在协和医院出生，体重7斤2两，哭声嘹亮。', 100);
+  ('d3eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', '女儿出生', '2024-06-01', '北京协和医院', 'b3eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'family', '小公主来到这个世界，7斤2两，母女平安', '女儿小雨在协和医院出生，体重7斤2两，哭声嘹亮。', 100),
+  ('d4eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', '情人节晚餐', '2024-02-14', '北京中关村', 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'custom', '和王芳在中关村的一家小餐厅吃了情人节晚餐', '第一次过真正意义上的情人节，王芳点了牛排，我点了意面，聊了很多关于未来。', 15),
+  ('d5eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', '团队季度复盘', '2024-05-20', '北京中关村', 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'first-job', '和赵明一起做 Q1 的产品复盘', '和赵明一起把 Q1 的关键指标过了一遍，调整了设计协作流程。', 8);
 
 -- 插入事件-人物关联
 INSERT INTO event_people (event_id, person_id)
 VALUES
   ('d1eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'c1eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'),
-  ('d3eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'c2eebc99-9c0b-4ef8-bb6d-6bb9bd380a11');
+  ('d1eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'c3eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'),
+  ('d2eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'c1eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'),
+  ('d3eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'c2eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'),
+  ('d4eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'c4eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'),
+  ('d5eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'c5eebc99-9c0b-4ef8-bb6d-6bb9bd380a11');
 
 -- 插入测试瞬间
 INSERT INTO moments (id, user_id, event_id, type, title, content, taken_at)
@@ -268,16 +276,18 @@ VALUES
   ('f1eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', '我的2024', '2024年是一个特殊的年份，创业启动、小雨出生...', 'draft', FALSE);
 
 -- 插入回忆录章节
-INSERT INTO memoir_chapters (id, memoir_id, title, content, sort_order)
+INSERT INTO memoir_chapters (id, memoir_id, title, content, sort_order, status)
 VALUES
-  ('g1eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'f1eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', '创业的起点', '2024年1月，我们决定...', 0),
-  ('g2eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'f1eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', '西藏之旅', '3月份的自驾游...', 1);
+  ('5a1eebc9-9c0b-4ef8-bb6d-6bb9bd380a11', 'f1eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', '创业的起点', '2024年1月，我们决定踏上创业这条路。在中关村的那间咖啡馆里，几个联合创始人围坐在一起，讨论着产品方向和商业模式。每个人眼中都有光。', 0, 'published'),
+  ('5a2eebc9-9c0b-4ef8-bb6d-6bb9bd380a11', 'f1eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', '西藏之旅', '3月份的自驾游，从成都一路向西，穿过二郎山、折多山、高尔寺山、剪子弯山、卡子拉山，最终抵达拉萨。318国道的每一道弯都让人终生难忘。', 1, 'draft'),
+  ('5a3eebc9-9c0b-4ef8-bb6d-6bb9bd380a11', 'f1eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', '小雨的诞生', '6月1日，女儿小雨在协和医院出生。7斤2两，哭声嘹亮。母女平安。那一刻我意识到，创业是为了给她一个更好的世界。', 2, 'draft');
 
 -- 插入章节-事件关联
 INSERT INTO chapter_events (chapter_id, event_id)
 VALUES
-  ('g1eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'd1eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'),
-  ('g2eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'd2eebc99-9c0b-4ef8-bb6d-6bb9bd380a11');
+  ('5a1eebc9-9c0b-4ef8-bb6d-6bb9bd380a11', 'd1eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'),
+  ('5a2eebc9-9c0b-4ef8-bb6d-6bb9bd380a11', 'd2eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'),
+  ('5a3eebc9-9c0b-4ef8-bb6d-6bb9bd380a11', 'd3eebc99-9c0b-4ef8-bb6d-6bb9bd380a11');
 
 -- 授予权限（如果需要）
 -- GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO timex;

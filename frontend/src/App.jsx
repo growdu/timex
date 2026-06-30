@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import AppLayout from "./components/AppLayout.jsx";
 import EventPage from "./pages/EventPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
+import RegisterPage from "./pages/RegisterPage.jsx";
 import LicensePage from "./pages/LicensePage.jsx";
 import MemoirPage from "./pages/MemoirPage.jsx";
 import PeoplePage from "./pages/PeoplePage.jsx";
@@ -11,6 +12,7 @@ import PersonPage from "./pages/PersonPage.jsx";
 import PlacePage from "./pages/PlacePage.jsx";
 import SpacePage from "./pages/SpacePage.jsx";
 import TimelinePage from "./pages/TimelinePage.jsx";
+import LinesPage from "./pages/LinesPage.jsx";
 import { authApi } from "./api/auth";
 import { eventsApi } from "./api/events";
 import { peopleApi } from "./api/people";
@@ -108,7 +110,7 @@ function ProtectedRoute({ children }) {
 }
 
 // Inner app component that has access to data
-function AppContent({ user }) {
+function AppContent({ user, onLogin }) {
   const logout = useLogout();
   const uiState = useUIStore();
 
@@ -133,33 +135,47 @@ function AppContent({ user }) {
   const years = useMemo(() => api.getYears(events), [events, api]);
 
   // Filter events based on uiState
-  const filteredEvents = useMemo(
+  const baseFilteredEvents = useMemo(
     () => api.filterEvents(events, uiState),
     [events, uiState, api]
   );
 
+  // 6 条线维度再过滤：line != all 时只保留该线下事件
+  const filteredEvents = useMemo(() => {
+    if (!uiState?.line || uiState.line === "all") return baseFilteredEvents;
+    return api.getEventsByLine(uiState.line, baseFilteredEvents);
+  }, [baseFilteredEvents, uiState?.line, api]);
+
   // Get selected event
   const selectedEvent = useMemo(
-    () => api.getSelectedEvent(uiState.selectedEventId, filteredEvents),
-    [uiState.selectedEventId, filteredEvents, api]
+    () => api.getSelectedEvent(uiState.selectedEventId, filteredEvents.length ? filteredEvents : events),
+    [uiState.selectedEventId, filteredEvents, events, api]
   );
 
-  // Get selected place and person
-  const selectedPlace = useMemo(
-    () => selectedEvent?.placeId ? api.getPlace(selectedEvent.placeId) : places[0],
-    [selectedEvent, api, places]
-  );
+  // Get selected place
+  const selectedPlace = useMemo(() => {
+    if (uiState.selectedPlaceId) {
+      return api.getPlace(uiState.selectedPlaceId);
+    }
+    if (selectedEvent?.placeId) {
+      return api.getPlace(selectedEvent.placeId);
+    }
+    return places[0];
+  }, [uiState.selectedPlaceId, selectedEvent, api, places]);
 
-  const selectedPerson = useMemo(
-    () => {
-      const personId = uiState.selectedPersonId;
-      if (personId) {
-        return api.getPerson(personId) || people[0];
+  // Get selected person
+  const selectedPerson = useMemo(() => {
+    if (uiState.selectedPersonId) {
+      return api.getPerson(uiState.selectedPersonId);
+    }
+    if (selectedEvent) {
+      const personIds = api.getEventPeopleIds(selectedEvent);
+      if (personIds.length > 0) {
+        return api.getPerson(personIds[0]);
       }
-      return people[0];
-    },
-    [uiState.selectedPersonId, api, people]
-  );
+    }
+    return people[0];
+  }, [uiState.selectedPersonId, selectedEvent, api, people]);
 
   // Session info from user or default
   const session = useMemo(() => ({
@@ -170,22 +186,17 @@ function AppContent({ user }) {
 
   // Detail links
   const detailLinks = useMemo(() => ({
-    event: selectedEvent ? `/events/${selectedEvent.id}` : '/events/e1',
-    place: selectedPlace ? `/places/${selectedPlace.id}` : '/places/p1',
-    person: selectedPerson ? `/people/${selectedPerson?.id}/detail` : '/people/p1/detail',
+    event: selectedEvent ? `/events/${selectedEvent.id}` : '/timeline',
+    place: selectedPlace ? `/places/${selectedPlace.id}` : '/space',
+    person: selectedPerson ? `/people/${selectedPerson.id}/detail` : '/people',
   }), [selectedEvent, selectedPlace, selectedPerson]);
 
   // Page notice
   const pageNotice = "数据来自真实 API，使用筛选器探索记忆";
 
   const handleUiStateChange = useCallback((updates) => {
-    uiState.setCurrentPage(uiState.currentPage);
-    if (updates.year !== undefined || updates.stage !== undefined || updates.search !== undefined) {
-      useUIStore.setState(updates);
-    } else {
-      useUIStore.setState(updates);
-    }
-  }, [uiState]);
+    useUIStore.setState(updates);
+  }, []);
 
   // Layout props builder
   const makeLayoutProps = useCallback((rightRail = null) => ({
@@ -194,145 +205,187 @@ function AppContent({ user }) {
     filteredEvents,
     years,
     api,
+    data: { events, people, places, memoirs },
+    selectedEvent,
+    selectedPlace,
+    selectedPerson,
     onUiStateChange: handleUiStateChange,
+    setUiState: handleUiStateChange,
+    setSelectedEvent: (id) => handleUiStateChange({ selectedEventId: id }),
+    setSelectedPlace: (id) => handleUiStateChange({ selectedPlaceId: id }),
+    setSelectedPerson: (id) => handleUiStateChange({ selectedPersonId: id }),
     onLogout: logout,
+    logout: logout,
     detailLinks,
     pageNotice,
     rightRail,
-  }), [session, uiState, filteredEvents, years, api, handleUiStateChange, logout, detailLinks, pageNotice]);
+  }), [session, uiState, filteredEvents, years, api, events, people, places, memoirs, selectedEvent, selectedPlace, selectedPerson, handleUiStateChange, logout, detailLinks, pageNotice]);
 
   return (
-    <Routes>
-      <Route path="/" element={<Navigate to="/timeline" replace />} />
+    <AppShell user={user} onLogin={onLogin}>
+      <Routes>
+        <Route path="/" element={<Navigate to="/timeline" replace />} />
 
-      <Route
-        path="/timeline"
-        element={
-          <ProtectedRoute>
-            <TimelinePage
-              Layout={AppLayout}
-              {...makeLayoutProps()}
-            />
-          </ProtectedRoute>
-        }
-      />
+        <Route
+          path="/login"
+          element={<Navigate to="/timeline" replace />}
+        />
 
-      <Route
-        path="/space"
-        element={
-          <ProtectedRoute>
-            <SpacePage
-              Layout={AppLayout}
-              {...makeLayoutProps()}
-            />
-          </ProtectedRoute>
-        }
-      />
+        <Route
+          path="/register"
+          element={<Navigate to="/timeline" replace />}
+        />
 
-      <Route
-        path="/people"
-        element={
-          <ProtectedRoute>
-            <PeoplePage
-              Layout={AppLayout}
-              {...makeLayoutProps()}
-            />
-          </ProtectedRoute>
-        }
-      />
+        <Route
+          path="/timeline"
+          element={
+            <ProtectedRoute>
+              <TimelinePage
+                Layout={AppLayout}
+                {...makeLayoutProps()}
+              />
+            </ProtectedRoute>
+          }
+        />
 
-      <Route
-        path="/memoir"
-        element={
-          <ProtectedRoute>
-            <MemoirPage
-              Layout={AppLayout}
-              {...makeLayoutProps()}
-            />
-          </ProtectedRoute>
-        }
-      />
+        <Route
+          path="/space"
+          element={
+            <ProtectedRoute>
+              <SpacePage
+                Layout={AppLayout}
+                {...makeLayoutProps()}
+              />
+            </ProtectedRoute>
+          }
+        />
 
-      <Route
-        path="/license"
-        element={
-          <ProtectedRoute>
-            <LicensePage user={user} />
-          </ProtectedRoute>
-        }
-      />
+        <Route
+          path="/people"
+          element={
+            <ProtectedRoute>
+              <PeoplePage
+                Layout={AppLayout}
+                {...makeLayoutProps()}
+              />
+            </ProtectedRoute>
+          }
+        />
 
-      <Route
-        path="/events/:eventId"
-        element={
-          <ProtectedRoute>
-            <EventPage
-              Layout={AppLayout}
-              {...makeLayoutProps()}
-            />
-          </ProtectedRoute>
-        }
-      />
+        <Route
+          path="/memoir"
+          element={
+            <ProtectedRoute>
+              <MemoirPage
+                Layout={AppLayout}
+                {...makeLayoutProps()}
+              />
+            </ProtectedRoute>
+          }
+        />
 
-      <Route
-        path="/places/:placeId"
-        element={
-          <ProtectedRoute>
-            <PlacePage
-              Layout={AppLayout}
-              {...makeLayoutProps()}
-            />
-          </ProtectedRoute>
-        }
-      />
+        <Route
+          path="/lines"
+          element={
+            <ProtectedRoute>
+              <LinesPage
+                Layout={AppLayout}
+                {...makeLayoutProps()}
+              />
+            </ProtectedRoute>
+          }
+        />
 
-      <Route
-        path="/people/:personId/detail"
-        element={
-          <ProtectedRoute>
-            <PersonPage
-              Layout={AppLayout}
-              {...makeLayoutProps()}
-            />
-          </ProtectedRoute>
-        }
-      />
-    </Routes>
+        <Route
+          path="/lines/:lineId"
+          element={
+            <ProtectedRoute>
+              <LinesPage
+                Layout={AppLayout}
+                {...makeLayoutProps()}
+              />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/license"
+          element={
+            <ProtectedRoute>
+              <LicensePage user={user} />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/events/:eventId"
+          element={
+            <ProtectedRoute>
+              <EventPage
+                Layout={AppLayout}
+                {...makeLayoutProps()}
+              />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/places/:placeId"
+          element={
+            <ProtectedRoute>
+              <PlacePage
+                Layout={AppLayout}
+                {...makeLayoutProps()}
+              />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/people/:personId/detail"
+          element={
+            <ProtectedRoute>
+              <PersonPage
+                Layout={AppLayout}
+                {...makeLayoutProps()}
+              />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </AppShell>
   );
 }
 
+function AppShell({ user, onLogin, children }) {
+  const location = useLocation();
+  if (!user) {
+    if (location.pathname === '/register') {
+      return <RegisterPage onLogin={onLogin} />;
+    }
+    if (location.pathname !== '/login') {
+      return <Navigate to="/login" replace />;
+    }
+    return <LoginPage onLogin={onLogin} />;
+  }
+  return children;
+}
+
 export default function App() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isLoading } = useAuth();
   const { mutate: login } = useLogin();
 
   const handleLogin = useCallback((email, password) => {
     login({ email, password });
   }, [login]);
 
+  if (isLoading) {
+    return <div className="loading-screen">加载中...</div>;
+  }
+
   return (
     <BrowserRouter>
-      <Routes>
-        <Route
-          path="/login"
-          element={
-            isAuthenticated ? (
-              <Navigate to="/timeline" replace />
-            ) : (
-              <LoginPage onLogin={handleLogin} />
-            )
-          }
-        />
-        <Route
-          path="/*"
-          element={
-            isAuthenticated ? (
-              <AppContent user={user} />
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          }
-        />
-      </Routes>
+      <AppContent user={user} onLogin={handleLogin} />
     </BrowserRouter>
   );
 }

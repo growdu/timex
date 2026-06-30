@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { Link } from "react-router-dom";
 
 export default function MemoirPage({
   Layout,
@@ -13,22 +14,52 @@ export default function MemoirPage({
   selectedPlace,
   selectedPerson,
 }) {
-  const selectedChapter =
-    data.memoirChapters.find((item) => item.id === uiState.selectedChapterId) || data.memoirChapters[0];
+  const memoirs = (data && data.memoirs) || [];
 
-  const chapterEvents = useMemo(
-    () =>
-      filteredEvents.filter((event) =>
-        selectedChapter.items.some((item) => event.title.includes(item.slice(0, 4))),
-      ),
-    [filteredEvents, selectedChapter],
-  );
+  const allChapters = useMemo(() => {
+    return memoirs.flatMap((m) =>
+      (m.chapters || []).map((c) => ({ ...c, memoirTitle: m.title, memoirId: m.id }))
+    );
+  }, [memoirs]);
 
-  const sourceEvents = chapterEvents.length ? chapterEvents : filteredEvents.slice(0, 4);
+  if (memoirs.length === 0) {
+    return (
+      <Layout
+        activeNav="memoir"
+        session={session}
+        uiState={uiState}
+        filteredEvents={filteredEvents || []}
+        onUiStateChange={setUiState}
+        data={data}
+        onLogout={logout}
+        detailLinks={{ event: '/timeline', place: '/space', person: '/people' }}
+        pageNotice="当前停留在回忆录编排路径。这里是 React 版编辑器工作台起点，后续可接入真实草稿保存。"
+      >
+        <section className="panel-card">
+          <div className="panel-title">
+            <div>
+              <span className="section-eyebrow">Memoir</span>
+              <h2>暂无回忆录</h2>
+            </div>
+          </div>
+          <p>您还没有创建任何回忆录。开始创建第一本回忆录吧。</p>
+        </section>
+      </Layout>
+    );
+  }
+
+  const selectedChapter = uiState.selectedChapterId
+    ? memoirs.flatMap((m) => m.chapters || []).find((c) => c.id === uiState.selectedChapterId)
+    : null;
+
+  const currentChapter = selectedChapter || allChapters[0] || { id: null, title: '默认章节', items: [], blurb: '', status: 'draft' };
+
+  const sourceEvents = (filteredEvents || []).slice(0, 4);
+
   const detailLinks = {
-    event: `/events/${selectedEvent.id}`,
-    place: `/places/${selectedPlace.id}`,
-    person: `/people/${selectedPerson.id}/detail`,
+    event: selectedEvent ? `/events/${selectedEvent.id}` : '/timeline',
+    place: selectedPlace ? `/places/${selectedPlace.id}` : '/space',
+    person: selectedPerson ? `/people/${selectedPerson.id}/detail` : '/people',
   };
 
   return (
@@ -36,8 +67,9 @@ export default function MemoirPage({
       activeNav="memoir"
       session={session}
       uiState={uiState}
-      filteredEvents={filteredEvents}
+      filteredEvents={filteredEvents || []}
       onUiStateChange={setUiState}
+        data={data}
       onLogout={logout}
       detailLinks={detailLinks}
       pageNotice="当前停留在回忆录编排路径。这里是 React 版编辑器工作台起点，后续可接入真实草稿保存。"
@@ -51,15 +83,19 @@ export default function MemoirPage({
               </div>
             </div>
             <div className="card-list compact">
-              {filteredEvents.slice(0, 4).map((event) => (
-                <article key={event.id} className="event-card compact-card">
-                  <div className="event-card-main">
-                    <span className="event-location">{event.location}</span>
-                    <h3>{event.title}</h3>
-                    <p className="event-meta">{event.date}</p>
-                  </div>
-                </article>
-              ))}
+              {sourceEvents.length === 0 ? (
+                <p>暂无事件</p>
+              ) : (
+                sourceEvents.map((event) => (
+                  <article key={event.id} className="event-card compact-card">
+                    <div className="event-card-main">
+                      <span className="event-location">{event.location || ''}</span>
+                      <h3>{event.title}</h3>
+                      <p className="event-meta">{event.date}</p>
+                    </div>
+                  </article>
+                ))
+              )}
             </div>
           </section>
 
@@ -71,8 +107,8 @@ export default function MemoirPage({
               </div>
             </div>
             <div className="cluster-card">
-              <strong>{selectedChapter.title}</strong>
-              <p>{selectedChapter.status} · 已挂载 {selectedChapter.items.length} 个章节线索</p>
+              <strong>{currentChapter.title}</strong>
+              <p>{currentChapter.status || 'draft'} · 已挂载 {(currentChapter.items || []).length} 个章节线索</p>
             </div>
           </section>
         </>
@@ -89,20 +125,24 @@ export default function MemoirPage({
           </div>
 
           <div className="chapter-list">
-            {data.memoirChapters.map((chapter, index) => (
-              <button
-                key={chapter.id}
-                className={`chapter-list-item ${chapter.id === selectedChapter.id ? "is-active" : ""}`}
-                type="button"
-                onClick={() => setUiState({ selectedChapterId: chapter.id })}
-              >
-                <div>
-                  <strong>{index + 1}. {chapter.title}</strong>
-                  <span>{chapter.status}</span>
-                </div>
-                <span className="pill-count">{chapter.items.length}</span>
-              </button>
-            ))}
+            {allChapters.length === 0 ? (
+              <p>暂无章节</p>
+            ) : (
+              allChapters.map((chapter, index) => (
+                <button
+                  key={chapter.id || `chapter-${index}`}
+                  className={`chapter-list-item ${chapter.id === currentChapter.id ? "is-active" : ""}`}
+                  type="button"
+                  onClick={() => setUiState({ selectedChapterId: chapter.id })}
+                >
+                  <div>
+                    <strong>{index + 1}. {chapter.title}</strong>
+                    <span>{chapter.status || 'draft'}</span>
+                  </div>
+                  <span className="pill-count">{(chapter.items || []).length}</span>
+                </button>
+              ))
+            )}
           </div>
         </div>
 
@@ -110,7 +150,7 @@ export default function MemoirPage({
           <div className="panel-title">
             <div>
               <span className="section-eyebrow">Memoir Editor</span>
-              <h2>{selectedChapter.title}</h2>
+              <h2>{currentChapter.title}</h2>
             </div>
             <div className="toolbar-row">
               <button className="mini-button" type="button">自动生成摘要</button>
@@ -122,20 +162,25 @@ export default function MemoirPage({
           <div className="editor-document">
             <section className="editor-section">
               <span className="section-eyebrow">Chapter Intro</span>
-              <p>{selectedChapter.blurb}</p>
+              <p>{currentChapter.blurb || currentChapter.summary || currentChapter.content || '暂无章节简介'}</p>
             </section>
             <section className="editor-section">
               <span className="section-eyebrow">Narrative Blocks</span>
               <div className="card-list compact">
-                {sourceEvents.map((event) => (
-                  <article key={event.id} className="event-card compact-card">
-                    <div className="event-card-main">
-                      <span className="event-location">{event.location}</span>
-                      <h3>{event.title}</h3>
-                      <p>{event.longText}</p>
-                    </div>
-                  </article>
-                ))}
+                {sourceEvents.length === 0 ? (
+                  <p>暂无事件可供编辑</p>
+                ) : (
+                  sourceEvents.map((event) => (
+                    <article key={event.id} className="event-card compact-card">
+                      <div className="event-card-main">
+                        <span className="event-location">{event.location || ''}</span>
+                        <h3>{event.title}</h3>
+                        <p>{event.longText || event.summary}</p>
+                        <Link className="mini-link" to={`/events/${event.id}`}>查看事件详情</Link>
+                      </div>
+                    </article>
+                  ))
+                )}
               </div>
             </section>
           </div>

@@ -37,7 +37,7 @@ export class User {
   @Column({ name: 'is_trial_active', default: true })
   isTrialActive: boolean;
 
-  @Column({ name: 'trial_expires_at', nullable: true })
+  @Column({ name: 'trial_expires_at', type: 'timestamp', nullable: true })
   trialExpiresAt: Date;
 
   @Column({ name: 'is_email_verified', default: false })

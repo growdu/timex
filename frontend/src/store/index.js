@@ -30,7 +30,21 @@ export const useLicenseStore = create((set) => ({
 export const useUIStore = create((set) => ({
   sidebarCollapsed: false,
   currentPage: 'timeline',
+  selectedEventId: null,
+  selectedPlaceId: null,
+  selectedPersonId: null,
+  selectedChapterId: null,
+  year: 'all',
+  stage: 'all',
+  line: 'all',
+  search: '',
 
   toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
   setCurrentPage: (page) => set({ currentPage: page }),
+  setUiState: (updates) => set((state) => ({ ...state, ...updates })),
+  setSelectedEvent: (id) => set({ selectedEventId: id }),
+  setSelectedPlace: (id) => set({ selectedPlaceId: id }),
+  setSelectedPerson: (id) => set({ selectedPersonId: id }),
+  setSelectedChapter: (id) => set({ selectedChapterId: id }),
+  resetFilters: () => set({ year: 'all', stage: 'all', line: 'all', search: '' }),
 }));

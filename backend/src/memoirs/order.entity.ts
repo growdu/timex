@@ -58,7 +58,7 @@ export class Order {
   })
   status: OrderStatus;
 
-  @Column({ name: 'paid_at', nullable: true })
+  @Column({ name: 'paid_at', type: 'timestamp', nullable: true })
   paidAt: Date;
 
   @Column({ nullable: true })

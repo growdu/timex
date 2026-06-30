@@ -27,3 +27,7 @@ coverage/
 # IDE
 .idea/
 .vscode/
+
+# Tooling runtime data
+.playwright-mcp/
+.remember/

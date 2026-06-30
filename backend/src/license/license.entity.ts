@@ -35,13 +35,13 @@ export class License {
   @Column({ name: 'device_limit', default: 3 })
   deviceLimit: number;
 
-  @Column({ name: 'purchased_at', nullable: true })
+  @Column({ name: 'purchased_at', type: 'timestamp', nullable: true })
   purchasedAt: Date | null;
 
-  @Column({ name: 'expires_at', nullable: true })
+  @Column({ name: 'expires_at', type: 'timestamp', nullable: true })
   expiresAt: Date | null;
 
-  @Column({ name: 'revoked_at', nullable: true })
+  @Column({ name: 'revoked_at', type: 'timestamp', nullable: true })
   revokedAt: Date | null;
 
   @Column({ type: 'jsonb', nullable: true })
