@@ -6,3 +6,4 @@ export { default as momentsApi } from './moments';
 export { default as peopleApi } from './people';
 export { default as placesApi } from './places';
 export { default as memoirsApi } from './memoirs';
+export { default as uploadApi } from './upload';

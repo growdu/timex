@@ -1,6 +1,20 @@
 import { useState, useRef } from "react";
+import { uploadApi } from "../api/upload";
 import { momentsApi } from "../api/moments";
 import { eventsApi } from "../api/events";
+
+const KIND_FROM_TYPE = {
+  photo: "photo",
+  video: "video",
+  audio: "audio",
+};
+
+const MOMENT_TYPE_FROM_KIND = {
+  photo: "photo",
+  video: "video",
+  audio: "audio",
+  text: "text",
+};
 
 export default function UploadModal({ onClose, onSuccess, userId }) {
   const [uploadType, setUploadType] = useState("photo");
@@ -51,21 +65,44 @@ export default function UploadModal({ onClose, onSuccess, userId }) {
     if (files.length === 0) return;
     setIsUploading(true);
 
+    let allOk = true;
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      setUploadProgress((prev) => ({ ...prev, [file.name]: "uploading" }));
+      setUploadProgress((prev) => ({ ...prev, [file.name]: 0 }));
+      try {
+        // 1) 上传到 OSS（S3 直传）
+        const result = await uploadApi.uploadFile(
+          file,
+          KIND_FROM_TYPE[uploadType],
+          {
+            onProgress: (pct) => {
+              setUploadProgress((prev) => ({ ...prev, [file.name]: pct }));
+            },
+          },
+        );
 
-      // Simulate upload progress
-      await new Promise((resolve) => setTimeout(resolve, 500));
+        // 2) 关联到 Moment（用返回的 url）
+        await momentsApi.create({
+          type: MOMENT_TYPE_FROM_KIND[uploadType],
+          title: title || file.name,
+          eventId: eventId || undefined,
+          mediaUrl: result.url,
+          fileSize: result.fileSize,
+        });
 
-      // In production, this would upload to OSS and create a moment
-      // For now, simulate success
-      setUploadProgress((prev) => ({ ...prev, [file.name]: "done" }));
+        setUploadProgress((prev) => ({ ...prev, [file.name]: 100 }));
+      } catch (err) {
+        console.error("Upload failed:", err);
+        allOk = false;
+        setUploadProgress((prev) => ({ ...prev, [file.name]: "error" }));
+      }
     }
 
     setIsUploading(false);
-    onSuccess && onSuccess();
-    onClose();
+    if (allOk) {
+      onSuccess && onSuccess();
+      onClose();
+    }
   };
 
   const removeFile = (fileName) => {
@@ -162,8 +199,10 @@ export default function UploadModal({ onClose, onSuccess, userId }) {
                 <span className="file-size">
                   {(file.size / 1024 / 1024).toFixed(2)} MB
                 </span>
-                <span className={`file-status ${uploadProgress[file.name] || ""}`}>
-                  {uploadProgress[file.name] === "done" ? "✓" : uploadProgress[file.name] === "uploading" ? "..." : ""}
+                <span className={`file-status ${typeof uploadProgress[file.name] === 'number' ? 'progress' : uploadProgress[file.name] || ''}`}>
+                  {uploadProgress[file.name] === 100 ? "✓" :
+                   uploadProgress[file.name] === "error" ? "✗" :
+                   typeof uploadProgress[file.name] === "number" ? `${uploadProgress[file.name]}%` : ""}
                 </span>
                 <button
                   className="file-remove"
