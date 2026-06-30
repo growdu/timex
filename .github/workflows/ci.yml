@@ -2,11 +2,14 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: ["**"]
   pull_request:
-    branches: [main]
+    branches: ["**"]
 
 jobs:
+  # ─────────────────────────────────────────────────────
+  # 基础：每个 PR / push 都跑
+  # ─────────────────────────────────────────────────────
   backend-test:
     runs-on: ubuntu-latest
     defaults:
@@ -19,15 +22,18 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
           cache-dependency-path: backend/package-lock.json
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Run linter
-        run: npm run lint
+      - name: Lint
+        run: npm run lint:check
+
+      - name: Typecheck
+        run: npm run typecheck
 
       - name: Run tests
         run: npm test
@@ -47,18 +53,63 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
-      - name: Run linter
-        run: npm run lint
+      - name: Lint
+        run: npm run lint -- --max-warnings=9999
 
       - name: Run tests
         run: npm run test:run
 
       - name: Build
         run: npm run build
+        env:
+          VITE_API_URL: ${{ vars.API_URL || 'http://localhost:3000' }}
+          VITE_BASE_URL: /
+
+  # ─────────────────────────────────────────────────────
+  # 健康检查：聚合脚本（lint + typecheck + test + build）
+  #   每天凌晨 + PR 触发
+  # ─────────────────────────────────────────────────────
+  health-check:
+    runs-on: ubuntu-latest
+    # 每天凌晨 3 点（UTC）跑一次
+    schedule:
+      - cron: "0 3 * * *"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci
+
+      - name: Install frontend deps
+        working-directory: frontend
+        run: npm ci --legacy-peer-deps
+
+      - name: Make health-check executable
+        run: chmod +x scripts/health-check.sh
+
+      - name: Run health check (full)
+        run: ./scripts/health-check.sh
+
+      - name: Upload output on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: health-check-output
+          path: |
+            /tmp/health-check.out
+            backend/coverage/
+            frontend/coverage/

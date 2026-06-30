@@ -107,7 +107,7 @@ describe('PeopleService', () => {
       peopleRepository.save.mockResolvedValue(mockPerson);
       peopleRepository.findOne.mockResolvedValue(mockPerson);
 
-      const result = await service.create('user-1', createDto);
+      await service.create('user-1', createDto);
 
       expect(peopleRepository.create).toHaveBeenCalledWith({
         userId: 'user-1',

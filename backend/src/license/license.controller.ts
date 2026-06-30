@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { LicenseService } from './license.service';
-import { ActivateLicenseDto, DeactivateDeviceDto } from './dto/license.dto';
+import { ActivateLicenseDto } from './dto/license.dto';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { User } from '../users/user.entity';
 

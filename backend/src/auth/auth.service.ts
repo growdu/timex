@@ -14,7 +14,6 @@ import { PlanType, LicenseStatus } from '../license/license.enums';
 import { Device } from '../devices/device.entity';
 import { RegisterDto, LoginDto } from './dto/auth.dto';
 import {
-  JwtPayload,
   AccessTokenPayload,
   RefreshTokenPayload,
 } from '../common/interfaces/jwt-payload.interface';
@@ -67,7 +66,7 @@ export class AuthService {
     });
     await this.licensesRepository.save(trialLicense);
 
-    const tokens = await this.generateTokens(user);
+    const tokens = this.generateTokens(user);
 
     return {
       user: {
@@ -100,7 +99,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const tokens = await this.generateTokens(user);
+    const tokens = this.generateTokens(user);
 
     return {
       user: {
@@ -131,15 +130,13 @@ export class AuthService {
         throw new UnauthorizedException('User not found');
       }
 
-      return await this.generateTokens(user);
+      return this.generateTokens(user);
     } catch {
       throw new UnauthorizedException('Invalid refresh token');
     }
   }
 
-  async generateTokens(
-    user: User,
-  ): Promise<{ accessToken: string; refreshToken: string }> {
+  generateTokens(user: User): { accessToken: string; refreshToken: string } {
     const accessPayload: AccessTokenPayload = {
       sub: user.id,
       email: user.email,

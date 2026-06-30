@@ -135,7 +135,7 @@ describe('MemoirsService', () => {
         chapters: [],
       });
 
-      const result = await service.create('user-1', createDto);
+      await service.create('user-1', createDto);
 
       expect(memoirsRepository.create).toHaveBeenCalledWith({
         userId: 'user-1',
@@ -261,7 +261,7 @@ describe('MemoirsService', () => {
       chaptersRepository.create.mockReturnValue(mockChapter);
       chaptersRepository.save.mockResolvedValue(mockChapter);
 
-      const result = await service.addChapter('user-1', 'memoir-1', {
+      await service.addChapter('user-1', 'memoir-1', {
         title: 'New Chapter',
         content: 'Chapter content',
       });
@@ -283,14 +283,9 @@ describe('MemoirsService', () => {
         title: 'Updated Title',
       });
 
-      const result = await service.updateChapter(
-        'user-1',
-        'memoir-1',
-        'chapter-1',
-        {
-          title: 'Updated Title',
-        },
-      );
+      await service.updateChapter('user-1', 'memoir-1', 'chapter-1', {
+        title: 'Updated Title',
+      });
 
       expect(chaptersRepository.save).toHaveBeenCalled();
     });

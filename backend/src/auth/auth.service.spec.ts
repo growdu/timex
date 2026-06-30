@@ -18,7 +18,6 @@ describe('AuthService', () => {
   let service: AuthService;
   let usersRepository: jest.Mocked<any>;
   let licensesRepository: jest.Mocked<any>;
-  let devicesRepository: jest.Mocked<any>;
   let jwtService: jest.Mocked<JwtService>;
 
   const mockUser: Partial<User> = {
@@ -79,7 +78,6 @@ describe('AuthService', () => {
     service = module.get<AuthService>(AuthService);
     usersRepository = module.get(getRepositoryToken(User));
     licensesRepository = module.get(getRepositoryToken(License));
-    devicesRepository = module.get(getRepositoryToken(Device));
     jwtService = module.get(JwtService);
   });
 
@@ -214,8 +212,8 @@ describe('AuthService', () => {
   });
 
   describe('generateTokens', () => {
-    it('should generate access and refresh tokens', async () => {
-      const result = await service.generateTokens(mockUser as User);
+    it('should generate access and refresh tokens', () => {
+      const result = service.generateTokens(mockUser as User);
 
       expect(result).toHaveProperty('accessToken');
       expect(result).toHaveProperty('refreshToken');

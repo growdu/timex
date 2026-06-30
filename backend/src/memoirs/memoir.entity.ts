@@ -28,7 +28,7 @@ export class Memoir {
   title: string;
 
   @Column({ type: 'text', nullable: true })
-  blurb: string;
+  blurb: string | null;
 
   @Column({
     type: 'enum',
@@ -38,13 +38,13 @@ export class Memoir {
   status: MemoirStatus;
 
   @Column({ name: 'cover_url', nullable: true })
-  coverUrl: string;
+  coverUrl: string | null;
 
   @Column({ name: 'is_public', default: false })
   isPublic: boolean;
 
   @Column({ name: 'share_token', unique: true, nullable: true })
-  shareToken: string;
+  shareToken: string | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

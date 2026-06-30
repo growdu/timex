@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between, Like } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Event } from './event.entity';
 import { EventStage } from './event-stage.enum';
 import { Person } from '../people/person.entity';
@@ -83,7 +83,7 @@ export class EventsService {
 
     if (dto.personIds && dto.personIds.length > 0) {
       const people = await this.peopleRepository.findBy({
-        id: dto.personIds as any,
+        id: In(dto.personIds),
         userId,
       });
       event.people = people;
@@ -105,7 +105,7 @@ export class EventsService {
 
     if (dto.personIds !== undefined) {
       const people = await this.peopleRepository.findBy({
-        id: dto.personIds as any,
+        id: In(dto.personIds),
         userId,
       });
       event.people = people;
@@ -128,7 +128,7 @@ export class EventsService {
       limit?: number;
     } = {},
   ): Promise<{ timeline: { year: number; events: Event[] }[]; total: number }> {
-    const { startYear, endYear, page = 1, limit = 50 } = options;
+    const { startYear, endYear } = options;
 
     const query = this.eventsRepository
       .createQueryBuilder('event')

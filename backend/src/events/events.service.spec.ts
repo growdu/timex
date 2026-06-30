@@ -146,7 +146,7 @@ describe('EventsService', () => {
       eventsRepository.save.mockResolvedValue(mockEvent);
       eventsRepository.findOne.mockResolvedValue(mockEvent);
 
-      const result = await service.create('user-1', createDto);
+      await service.create('user-1', createDto);
 
       expect(eventsRepository.create).toHaveBeenCalled();
       expect(eventsRepository.save).toHaveBeenCalled();
@@ -180,7 +180,7 @@ describe('EventsService', () => {
         ...updateDto,
       });
 
-      const result = await service.update('user-1', 'event-1', updateDto);
+      await service.update('user-1', 'event-1', updateDto);
 
       expect(eventsRepository.save).toHaveBeenCalled();
     });
