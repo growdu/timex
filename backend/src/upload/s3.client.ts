@@ -1,6 +1,9 @@
 import { S3Client, HeadBucketCommand, CreateBucketCommand } from '@aws-sdk/client-s3';
 import { s3Config } from './upload.config';
 
+/** DI token for injecting the S3 client into other modules */
+export const S3_CLIENT = 'S3_CLIENT';
+
 /**
  * S3Client 单例 + bucket 初始化
  *

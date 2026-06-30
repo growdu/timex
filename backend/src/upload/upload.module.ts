@@ -2,7 +2,9 @@ import { Module, OnModuleInit, Logger } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { UploadService } from './upload.service';
 import { UploadController } from './upload.controller';
-import { ensureBucket, getS3Client } from './s3.client';
+import { ensureBucket, getS3Client, S3_CLIENT } from './s3.client';
+
+export { S3_CLIENT };
 
 @Module({
   imports: [ConfigModule],
@@ -10,11 +12,11 @@ import { ensureBucket, getS3Client } from './s3.client';
   providers: [
     UploadService,
     {
-      provide: 'S3_CLIENT',
+      provide: S3_CLIENT,
       useFactory: () => getS3Client(),
     },
   ],
-  exports: [UploadService],
+  exports: [UploadService, S3_CLIENT],
 })
 export class UploadModule implements OnModuleInit {
   private readonly logger = new Logger(UploadModule.name);

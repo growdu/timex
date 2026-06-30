@@ -219,3 +219,49 @@ curl -sS -X POST http://localhost:3000/api/upload/complete \
 - **缩略图**：上传后调用后端图片处理（sharp/imagor）生成 thumbnail，存到 `uploads/{userId}/thumb/{key}`
 - **AI 打标**：上传图片后异步任务 → 调用视觉模型 → 写回 `Moment.aiTags`（详见 `ai-integration.md`，待写）
 - **CDN**：Aliyun CDN / CloudFront 绑自定义域名替换 `S3_PUBLIC_URL`，前端无需改动
+
+## 健康检查
+
+`GET /health` 返回后端整体状态（含 S3 探活）：
+
+```json
+{
+  "status": "ok",
+  "timestamp": "2026-06-30T03:00:00.000Z",
+  "uptimeSec": 3600,
+  "components": {
+    "api": { "status": "ok", "latencyMs": 0 },
+    "s3":  { "status": "ok", "latencyMs": 12 }
+  }
+}
+```
+
+| 字段                       | 含义                                                    |
+|----------------------------|---------------------------------------------------------|
+| `status`                   | `ok`（全部组件 ok 或 disabled）/ `degraded`（任一 error） |
+| `components.s3.status`     | `ok` / `error` / `disabled`（未注入 S3Client 时）        |
+| `components.s3.latencyMs`  | HeadBucket 调用耗时                                     |
+| `components.s3.error`      | 错误描述（仅 status=error）                             |
+
+### 监控告警建议
+
+- `status != "ok"` → P2 告警
+- `components.s3.latencyMs > 1000` → P3 告警（持续 ≥ 5min 升 P2）
+- `components.s3.status == "disabled"` → 配置异常
+
+### K8s probe 配置示例
+
+```yaml
+livenessProbe:
+  httpGet: { path: /health, port: 3000 }
+  initialDelaySeconds: 30
+  periodSeconds: 30
+  failureThreshold: 3
+readinessProbe:
+  httpGet: { path: /health, port: 3000 }
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  failureThreshold: 2
+```
+
+注：当前 `/health` 不区分 liveness/readiness；如需拆分可加 query param `?deep=true` 做完整探活。

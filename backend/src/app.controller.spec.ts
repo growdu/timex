@@ -31,16 +31,19 @@ describe('AppController', () => {
   });
 
   describe('getHealth', () => {
-    it('returns status from service', () => {
-      appService.getHealth.mockReturnValue({
-        status: 'ok',
+    it('returns health report from service', async () => {
+      const report = {
+        status: 'ok' as const,
         timestamp: '2024-01-01T00:00:00Z',
-      });
+        uptimeSec: 10,
+        components: {
+          api: { status: 'ok' as const, latencyMs: 0 },
+          s3: { status: 'ok' as const, latencyMs: 5 },
+        },
+      };
+      appService.getHealth.mockResolvedValue(report);
 
-      expect(controller.getHealth()).toEqual({
-        status: 'ok',
-        timestamp: '2024-01-01T00:00:00Z',
-      });
+      await expect(controller.getHealth()).resolves.toEqual(report);
       expect(appService.getHealth).toHaveBeenCalled();
     });
   });
