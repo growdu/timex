@@ -14,6 +14,7 @@ import { PeopleModule } from './people/people.module';
 import { PlacesModule } from './places/places.module';
 import { MemoirsModule } from './memoirs/memoirs.module';
 import { UploadModule } from './upload/upload.module';
+import { AppThrottlerModule } from './throttler/throttler.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { UploadModule } from './upload/upload.module';
     PlacesModule,
     MemoirsModule,
     UploadModule,
+    AppThrottlerModule,
   ],
   controllers: [AppController],
   providers: [AppService],
