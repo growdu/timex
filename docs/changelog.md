@@ -2,6 +2,12 @@
 
 ## [Unreleased] — 2026-06-30（测试覆盖推进）
 
+### 归档
+- 删档 `web-test/` 静态原型（v0.1）：13 文件 / ~100KB，从初始 commit `3b6106b` 起
+  已被 v1.0 React/Vite SPA 取代。删除损坏文档 `docs/web-prototype.md`
+  （绝对路径未同步），新建归档说明 `docs/web-prototype-archive.md`。
+  可通过 `git show 3b6106b -- web-test/` 找回。
+
 ### 新增（功能）
 - 后端 `memoirs.service` CRUD 测试 13 条，98.48% 覆盖
 - 后端 `moments.service` CRUD 测试 17 条，100% 覆盖
