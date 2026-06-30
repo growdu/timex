@@ -14,24 +14,24 @@ export class Device {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'user_id' })
+  @Column({ name: 'user_id', type: 'varchar'})
   userId: string;
 
   @ManyToOne(() => User, (user) => user.devices, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @Column({ name: 'license_id', nullable: true })
+  @Column({ name: 'license_id', nullable: true, type: 'varchar'})
   licenseId: string;
 
   @ManyToOne(() => License, { onDelete: 'SET NULL', nullable: true })
   @JoinColumn({ name: 'license_id' })
   license: License;
 
-  @Column({ name: 'device_name' })
+  @Column({ name: 'device_name', type: 'varchar'})
   deviceName: string;
 
-  @Column({ name: 'device_fingerprint' })
+  @Column({ name: 'device_fingerprint', type: 'varchar'})
   deviceFingerprint: string;
 
   @Column({

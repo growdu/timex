@@ -17,7 +17,7 @@ export class MemoirChapter {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'memoir_id' })
+  @Column({ name: 'memoir_id', type: 'varchar'})
   memoirId: string;
 
   @ManyToOne(() => Memoir, (memoir) => memoir.chapters, { onDelete: 'CASCADE' })
@@ -30,10 +30,10 @@ export class MemoirChapter {
   @Column({ type: 'text', nullable: true })
   content: string;
 
-  @Column({ name: 'sort_order', default: 0 })
+  @Column({ name: 'sort_order', default: 0, type: 'int'})
   sortOrder: number;
 
-  @Column({ name: 'cover_url', nullable: true })
+  @Column({ name: 'cover_url', nullable: true, type: 'varchar'})
   coverUrl: string;
 
   @Column({

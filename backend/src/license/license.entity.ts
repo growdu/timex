@@ -16,14 +16,14 @@ export class License {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'user_id' })
+  @Column({ name: 'user_id', type: 'varchar'})
   userId: string;
 
   @ManyToOne(() => User, (user) => user.licenses, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @Column({ name: 'license_key', unique: true })
+  @Column({ name: 'license_key', unique: true, type: 'varchar'})
   licenseKey: string;
 
   @Column({ name: 'plan_type', type: 'enum', enum: PlanType })
@@ -32,7 +32,7 @@ export class License {
   @Column({ type: 'enum', enum: LicenseStatus, default: LicenseStatus.ACTIVE })
   status: LicenseStatus;
 
-  @Column({ name: 'device_limit', default: 3 })
+  @Column({ name: 'device_limit', default: 3, type: 'int'})
   deviceLimit: number;
 
   @Column({ name: 'purchased_at', type: 'timestamp', nullable: true })
