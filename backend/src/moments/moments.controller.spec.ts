@@ -31,7 +31,10 @@ describe('MomentsController', () => {
 
   describe('findAll', () => {
     it('forwards type, eventId, and pagination', async () => {
-      momentsService.findAll.mockResolvedValue({ moments: [mockMoment], total: 1 });
+      momentsService.findAll.mockResolvedValue({
+        moments: [mockMoment],
+        total: 1,
+      });
 
       await controller.findAll(mockUser, MomentType.PHOTO, 'event-1', 1, 50);
 
@@ -72,7 +75,11 @@ describe('MomentsController', () => {
   });
 
   it('create → forwards dto', async () => {
-    const dto: any = { eventId: 'event-1', type: MomentType.PHOTO, mediaUrl: 'x' };
+    const dto: any = {
+      eventId: 'event-1',
+      type: MomentType.PHOTO,
+      mediaUrl: 'x',
+    };
     momentsService.create.mockResolvedValue(mockMoment);
 
     await controller.create(mockUser, dto);
@@ -83,7 +90,7 @@ describe('MomentsController', () => {
   it('update → forwards dto', async () => {
     momentsService.update.mockResolvedValue(mockMoment);
 
-    await controller.update(mockUser, 'moment-1', { content: 'X' } as any);
+    await controller.update(mockUser, 'moment-1', { content: 'X' });
 
     expect(momentsService.update).toHaveBeenCalledWith('user-1', 'moment-1', {
       content: 'X',

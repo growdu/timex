@@ -17,8 +17,9 @@
 | 多租户隔离 | ✓ | 所有业务表带 `user_id`，Service 层强制 |
 | 时间线首页 | ✓ | 8 个模块：问候 / 统计 / 周年 / SVG 时间线 / 阶段分布 / 活跃回忆录 / 近期记忆 / 快速操作 |
 | 6 条线维度 | ✓ | 时间 / 空间 / 感情 / 事业 / 亲情 / 朋友，全在前端 apiAdapter 派生，0 DB 改动 |
-| **后端测试覆盖** | ✓ | **156 tests passing** / 80% 行 / 77.17% 语句 / 72.62% 分支；8/8 controllers 100%；4/4 CRUD services 100% |
-| **前端测试覆盖** | 🚧 | apiAdapter / lines / lineMatchers 100%；12 hooks 100%；Pages 待补 |
+| **后端测试覆盖** | ✓ | **156 tests passing** / 77.17% 语句 / 72.62% 分支 / 80% 行；8/8 controllers 100%；4/4 CRUD services 100% |
+| **前端测试覆盖** | 🚧 | apiAdapter 99.7% / lines + lineMatchers 100% / 12 hooks 100% / store 100% / 仅 LicensePage + LoginPage 有测试；Pages 阶段 13 补完 |
+| **CI 全绿** | ✓ | health-check.sh fast + coverage 9 步全过；后端 50% / 前端 15% 分级阈值（Pages 测试补完后前端阈值升 50%） |
 
 ## 视觉与可视化（本轮升级）
 

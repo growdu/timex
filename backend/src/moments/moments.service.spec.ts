@@ -88,7 +88,9 @@ describe('MomentsService', () => {
     it('should filter by type when provided', async () => {
       queryBuilder.getManyAndCount.mockResolvedValue([[], 0]);
 
-      await service.findByEvent('user-1', 'event-1', { type: MomentType.VIDEO });
+      await service.findByEvent('user-1', 'event-1', {
+        type: MomentType.VIDEO,
+      });
 
       expect(queryBuilder.andWhere).toHaveBeenCalledWith(
         'moment.type = :type',

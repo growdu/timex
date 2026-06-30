@@ -31,9 +31,19 @@ describe('EventsController', () => {
 
   describe('findAll', () => {
     it('forwards all query params', async () => {
-      eventsService.findAll.mockResolvedValue({ events: [mockEvent], total: 1 });
+      eventsService.findAll.mockResolvedValue({
+        events: [mockEvent],
+        total: 1,
+      });
 
-      await controller.findAll(mockUser, 2024, EventStage.STUDENT, 'wedding', 1, 20);
+      await controller.findAll(
+        mockUser,
+        2024,
+        EventStage.STUDENT,
+        'wedding',
+        1,
+        20,
+      );
 
       expect(eventsService.findAll).toHaveBeenCalledWith('user-1', {
         year: 2024,
@@ -113,7 +123,11 @@ describe('EventsController', () => {
 
       await controller.update(mockUser, 'event-1', dto);
 
-      expect(eventsService.update).toHaveBeenCalledWith('user-1', 'event-1', dto);
+      expect(eventsService.update).toHaveBeenCalledWith(
+        'user-1',
+        'event-1',
+        dto,
+      );
     });
   });
 

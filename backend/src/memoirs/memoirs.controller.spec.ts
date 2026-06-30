@@ -1,11 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { MemoirsController, PublicMemoirsController } from './memoirs.controller';
+import {
+  MemoirsController,
+  PublicMemoirsController,
+} from './memoirs.controller';
 import { MemoirsService } from './memoirs.service';
 import { MemoirStatus } from './memoir-status.enum';
 
 describe('MemoirsController', () => {
   let controller: MemoirsController;
-  let publicController: PublicMemoirsController;
+  let _publicController: PublicMemoirsController;
   let memoirsService: jest.Mocked<MemoirsService>;
 
   const mockUser = { id: 'user-1' } as any;
@@ -30,7 +33,9 @@ describe('MemoirsController', () => {
     }).compile();
 
     controller = module.get<MemoirsController>(MemoirsController);
-    publicController = module.get<PublicMemoirsController>(PublicMemoirsController);
+    _publicController = module.get<PublicMemoirsController>(
+      PublicMemoirsController,
+    );
     memoirsService = module.get(MemoirsService);
   });
 
@@ -109,7 +114,10 @@ describe('MemoirsController', () => {
 
       const result = await controller.getShareToken(mockUser, 'mem-1');
 
-      expect(memoirsService.getShareToken).toHaveBeenCalledWith('user-1', 'mem-1');
+      expect(memoirsService.getShareToken).toHaveBeenCalledWith(
+        'user-1',
+        'mem-1',
+      );
       expect(result).toEqual({ shareToken: 'share-abc' });
     });
   });
@@ -121,18 +129,19 @@ describe('MemoirsController', () => {
 
       await controller.addChapter(mockUser, 'mem-1', dto);
 
-      expect(memoirsService.addChapter).toHaveBeenCalledWith('user-1', 'mem-1', dto);
+      expect(memoirsService.addChapter).toHaveBeenCalledWith(
+        'user-1',
+        'mem-1',
+        dto,
+      );
     });
 
     it('updateChapter → forwards', async () => {
       memoirsService.updateChapter.mockResolvedValue({} as any);
 
-      await controller.updateChapter(
-        mockUser,
-        'mem-1',
-        'ch-1',
-        { title: 'Updated' } as any,
-      );
+      await controller.updateChapter(mockUser, 'mem-1', 'ch-1', {
+        title: 'Updated',
+      } as any);
 
       expect(memoirsService.updateChapter).toHaveBeenCalledWith(
         'user-1',
@@ -157,7 +166,7 @@ describe('MemoirsController', () => {
 });
 
 describe('PublicMemoirsController', () => {
-  let publicController: PublicMemoirsController;
+  let _publicController: PublicMemoirsController;
   let memoirsService: jest.Mocked<MemoirsService>;
 
   beforeEach(async () => {
@@ -179,14 +188,16 @@ describe('PublicMemoirsController', () => {
       providers: [{ provide: MemoirsService, useValue: mockService }],
     }).compile();
 
-    publicController = module.get<PublicMemoirsController>(PublicMemoirsController);
+    _publicController = module.get<PublicMemoirsController>(
+      PublicMemoirsController,
+    );
     memoirsService = module.get(MemoirsService);
   });
 
   it('getByShareToken → forwards token (no auth)', async () => {
     memoirsService.getByShareToken.mockResolvedValue({} as any);
 
-    await publicController.getByShareToken('share-abc');
+    await _publicController.getByShareToken('share-abc');
 
     expect(memoirsService.getByShareToken).toHaveBeenCalledWith('share-abc');
   });

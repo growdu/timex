@@ -243,7 +243,11 @@ describe('EventsService', () => {
     });
 
     it('should return event via findOne after creation', async () => {
-      const dto: any = { title: 'X', date: '2024-01-01', stage: EventStage.STUDENT };
+      const dto: any = {
+        title: 'X',
+        date: '2024-01-01',
+        stage: EventStage.STUDENT,
+      };
       const created = { ...mockEvent, ...dto, id: 'event-99' };
       eventsRepository.create.mockReturnValue(created);
       eventsRepository.save.mockResolvedValue(created);

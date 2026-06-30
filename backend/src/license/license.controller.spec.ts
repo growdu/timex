@@ -56,7 +56,10 @@ describe('LicenseController', () => {
 
     await controller.deactivateDevice(mockUser, 'dev-1');
 
-    expect(licenseService.deactivateDevice).toHaveBeenCalledWith('user-1', 'dev-1');
+    expect(licenseService.deactivateDevice).toHaveBeenCalledWith(
+      'user-1',
+      'dev-1',
+    );
   });
 
   it('verifyLicenseToken → forwards token', async () => {

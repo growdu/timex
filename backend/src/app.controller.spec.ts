@@ -32,7 +32,10 @@ describe('AppController', () => {
 
   describe('getHealth', () => {
     it('returns status from service', () => {
-      appService.getHealth.mockReturnValue({ status: 'ok', timestamp: '2024-01-01T00:00:00Z' });
+      appService.getHealth.mockReturnValue({
+        status: 'ok',
+        timestamp: '2024-01-01T00:00:00Z',
+      });
 
       expect(controller.getHealth()).toEqual({
         status: 'ok',
