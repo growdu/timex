@@ -15,6 +15,7 @@ import { PlacesModule } from './places/places.module';
 import { MemoirsModule } from './memoirs/memoirs.module';
 import { UploadModule } from './upload/upload.module';
 import { AppThrottlerModule } from './throttler/throttler.module';
+import { AiModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { AppThrottlerModule } from './throttler/throttler.module';
     MemoirsModule,
     UploadModule,
     AppThrottlerModule,
+    AiModule,
   ],
   controllers: [AppController],
   providers: [AppService],
