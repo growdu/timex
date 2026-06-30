@@ -1,5 +1,7 @@
 import { Link, useParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import SpaceMap from "../components/SpaceMap.jsx";
+import { AiActionButton } from "../components/AiActionButton";
 
 export default function EventPage({
   Layout,
@@ -13,6 +15,7 @@ export default function EventPage({
 }) {
   const { eventId } = useParams();
   const event = api.getEvent(eventId) || (data?.events && data.events[0]);
+  const queryClient = useQueryClient();
 
   if (!event) {
     return (
@@ -106,6 +109,15 @@ export default function EventPage({
             {place && <Link className="primary-button" to={detailLinks.place}>查看地点详情</Link>}
             {leadPerson && <Link className="secondary-button" to={detailLinks.person}>查看人物详情</Link>}
             <Link className="secondary-button" to="/memoir">加入回忆录编辑器</Link>
+            <AiActionButton
+              kind="event-summary"
+              args={{
+                eventId: event.id,
+                text: [event.title, event.longText, event.summary].filter(Boolean).join('\n'),
+              }}
+              label="AI 一句话摘要"
+              onSettled={() => queryClient.invalidateQueries({ queryKey: ['events'] })}
+            />
           </div>
         </div>
       </section>

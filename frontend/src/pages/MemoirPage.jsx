@@ -1,5 +1,7 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { AiActionButton } from "../components/AiActionButton";
 
 export default function MemoirPage({
   Layout,
@@ -15,6 +17,7 @@ export default function MemoirPage({
   selectedPerson,
 }) {
   const memoirs = (data && data.memoirs) || [];
+  const queryClient = useQueryClient();
 
   const allChapters = useMemo(() => {
     return memoirs.flatMap((m) =>
@@ -153,7 +156,16 @@ export default function MemoirPage({
               <h2>{currentChapter.title}</h2>
             </div>
             <div className="toolbar-row">
-              <button className="mini-button" type="button">自动生成摘要</button>
+              <AiActionButton
+                kind="chapter-summary"
+                args={{
+                  chapterId: currentChapter.id,
+                  text: (currentChapter.items || []).map(i => i.content || i.summary || '').join('\n'),
+                }}
+                label="AI 生成摘要"
+                disabled={!currentChapter.id}
+                onSettled={() => queryClient.invalidateQueries({ queryKey: ['memoirs'] })}
+              />
               <button className="mini-button" type="button">插入事件</button>
               <button className="mini-button" type="button">预览章节</button>
             </div>
