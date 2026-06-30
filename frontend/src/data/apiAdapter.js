@@ -104,8 +104,8 @@ export function createApiAdapter({ events = [], people = [], places = [], memoir
 
     getEventYear(event) {
       if (!event || !event.date) return null;
-      const match = String(event.date).match(/^(\d{4})/);
-      return match ? parseInt(match[1], 10) : null;
+      const parts = this._parseDateParts(event.date);
+      return parts ? parts.year : null;
     },
 
     formatPeople(peopleData) {
@@ -227,6 +227,11 @@ export function createApiAdapter({ events = [], people = [], places = [], memoir
       return getEventPersonIds(event);
     },
 
+    // Expose internal helper as public method
+    getEventPersonIds(event) {
+      return getEventPersonIds(event);
+    },
+
     // Total media moments across events
     getTotalMedia(eventsList) {
       return (eventsList || []).reduce((sum, e) => sum + this.getMediaTotal(e), 0);
@@ -273,43 +278,49 @@ export function createApiAdapter({ events = [], people = [], places = [], memoir
 
     // Events whose month-day matches today (anniversaries)
     getAnniversaries(eventsList, referenceDate = new Date()) {
-      const refMonth = referenceDate.getMonth();
-      const refDay = referenceDate.getDate();
+      const ref = this._parseDateParts(referenceDate);
+      if (!ref) return [];
       return (eventsList || [])
         .filter((e) => {
           const parts = this._parseDateParts(e.date);
           if (!parts) return false;
-          return parts.month === refMonth && parts.day === refDay && parts.year < referenceDate.getFullYear();
+          return parts.month === ref.month && parts.day === ref.day && parts.year < ref.year;
         })
         .map((e) => {
           const parts = this._parseDateParts(e.date);
-          return { ...e, yearsAgo: referenceDate.getFullYear() - parts.year };
+          return { ...e, yearsAgo: ref.year - parts.year };
         })
         .sort((a, b) => b.yearsAgo - a.yearsAgo);
     },
 
     // Events from this same month in past years
     getThisMonthMemories(eventsList, referenceDate = new Date()) {
-      const refMonth = referenceDate.getMonth();
+      const ref = this._parseDateParts(referenceDate);
+      if (!ref) return [];
       return (eventsList || [])
         .filter((e) => {
           const parts = this._parseDateParts(e.date);
           if (!parts) return false;
-          return parts.month === refMonth && parts.year < referenceDate.getFullYear();
+          return parts.month === ref.month && parts.year < ref.year;
         })
         .map((e) => {
           const parts = this._parseDateParts(e.date);
-          return { ...e, yearsAgo: referenceDate.getFullYear() - parts.year };
+          return { ...e, yearsAgo: ref.year - parts.year };
         })
         .sort((a, b) => b.yearsAgo - a.yearsAgo);
     },
 
-    // Parse a date value (string or Date) to {year, month, day} using local time.
-    // Avoids timezone drift when the server returns a UTC-midnight ISO string.
+    // Parse a date value (string or Date) to {year, month, day}.
+    // For ISO YYYY-MM-DD strings, parse the literal parts to avoid timezone drift.
+    // For Date objects, use UTC accessors so a UTC-midnight Date stays on its date.
     _parseDateParts(value) {
       if (!value) return null;
       if (value instanceof Date) {
-        return { year: value.getFullYear(), month: value.getMonth(), day: value.getDate() };
+        return {
+          year: value.getUTCFullYear(),
+          month: value.getUTCMonth(),
+          day: value.getUTCDate(),
+        };
       }
       const s = String(value);
       const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
@@ -318,7 +329,7 @@ export function createApiAdapter({ events = [], people = [], places = [], memoir
       }
       const d = new Date(s);
       if (isNaN(d.getTime())) return null;
-      return { year: d.getFullYear(), month: d.getMonth(), day: d.getDate() };
+      return { year: d.getUTCFullYear(), month: d.getUTCMonth(), day: d.getUTCDate() };
     },
 
     // ============ 6 Lines (派生层) ============

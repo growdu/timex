@@ -6,55 +6,56 @@ import { Event } from './event.entity';
 import { EventStage } from './event-stage.enum';
 import { Person } from '../people/person.entity';
 
+const mockEvent: any = {
+  id: 'event-1',
+  userId: 'user-1',
+  title: 'Test Event',
+  summary: 'A test event',
+  date: '2024-06-15',
+  stage: EventStage.STUDENT,
+  placeId: 'place-1',
+  createdAt: new Date(),
+};
+
+const mockPerson: any = {
+  id: 'person-1',
+  userId: 'user-1',
+  name: 'Alice',
+  role: 'Friend',
+};
+
 describe('EventsService', () => {
   let service: EventsService;
   let eventsRepository: jest.Mocked<any>;
   let peopleRepository: jest.Mocked<any>;
-  let queryBuilderMock: any;
+  let queryBuilder: any;
 
-  const mockEvent: Partial<Event> = {
-    id: 'event-1',
-    userId: 'user-1',
-    title: 'Test Event',
-    date: '2024-01-01',
-    location: 'Test Location',
-    stage: EventStage.MAKER,
-    summary: 'Test summary',
-    weight: 1,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
-
-  const mockPerson: Partial<Person> = {
-    id: 'person-1',
-    userId: 'user-1',
-    name: 'Test Person',
-    role: 'Friend',
-    createdAt: new Date(),
-  };
-
-  beforeEach(async () => {
-    queryBuilderMock = {
-      leftJoinAndSelect: jest.fn().mockReturnThis(),
+  const buildQueryBuilder = (result: [any[], number]) => {
+    const qb: any = {
       where: jest.fn().mockReturnThis(),
       andWhere: jest.fn().mockReturnThis(),
       orderBy: jest.fn().mockReturnThis(),
       skip: jest.fn().mockReturnThis(),
       take: jest.fn().mockReturnThis(),
-      getManyAndCount: jest.fn().mockResolvedValue([[], 0]),
+      leftJoinAndSelect: jest.fn().mockReturnThis(),
+      getManyAndCount: jest.fn().mockResolvedValue(result),
     };
+    return qb;
+  };
+
+  beforeEach(async () => {
+    queryBuilder = buildQueryBuilder([[mockEvent], 1]);
 
     const mockEventsRepo = {
       findOne: jest.fn(),
-      findAndCount: jest.fn(),
+      find: jest.fn(),
       create: jest.fn(),
       save: jest.fn(),
       remove: jest.fn(),
-      createQueryBuilder: jest.fn(() => queryBuilderMock),
+      createQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
     };
 
     const mockPeopleRepo = {
-      findOne: jest.fn(),
       findBy: jest.fn(),
     };
 
@@ -78,43 +79,87 @@ describe('EventsService', () => {
   });
 
   describe('findAll', () => {
-    it('should return paginated events', async () => {
-      const events = [mockEvent];
-      queryBuilderMock.getManyAndCount.mockResolvedValue([events, 1]);
+    it('should return paginated events with relations joined', async () => {
+      queryBuilder.getManyAndCount.mockResolvedValue([[mockEvent], 1]);
 
       const result = await service.findAll('user-1', { page: 1, limit: 20 });
 
-      expect(result.events).toEqual(events);
+      expect(result.events).toEqual([mockEvent]);
       expect(result.total).toBe(1);
+      expect(queryBuilder.leftJoinAndSelect).toHaveBeenCalledWith(
+        'event.place',
+        'place',
+      );
+      expect(queryBuilder.leftJoinAndSelect).toHaveBeenCalledWith(
+        'event.people',
+        'people',
+      );
+      expect(queryBuilder.leftJoinAndSelect).toHaveBeenCalledWith(
+        'event.moments',
+        'moments',
+      );
+      expect(queryBuilder.where).toHaveBeenCalledWith(
+        'event.userId = :userId',
+        { userId: 'user-1' },
+      );
+      expect(queryBuilder.orderBy).toHaveBeenCalledWith('event.date', 'DESC');
     });
 
-    it('should filter events by year', async () => {
-      queryBuilderMock.getManyAndCount.mockResolvedValue([[], 0]);
-
+    it('should filter by year when provided', async () => {
       await service.findAll('user-1', { year: 2024 });
 
-      expect(queryBuilderMock.andWhere).toHaveBeenCalled();
+      expect(queryBuilder.andWhere).toHaveBeenCalledWith(
+        'EXTRACT(YEAR FROM event.date) = :year',
+        { year: 2024 },
+      );
     });
 
-    it('should filter events by stage', async () => {
-      queryBuilderMock.getManyAndCount.mockResolvedValue([[], 0]);
+    it('should filter by stage when provided', async () => {
+      await service.findAll('user-1', { stage: EventStage.STUDENT });
 
-      await service.findAll('user-1', { stage: EventStage.MAKER });
-
-      expect(queryBuilderMock.andWhere).toHaveBeenCalled();
+      expect(queryBuilder.andWhere).toHaveBeenCalledWith(
+        'event.stage = :stage',
+        { stage: 'student' },
+      );
     });
 
-    it('should filter events by keyword', async () => {
-      queryBuilderMock.getManyAndCount.mockResolvedValue([[], 0]);
+    it('should filter by keyword with ILIKE', async () => {
+      await service.findAll('user-1', { keyword: 'wedding' });
 
-      await service.findAll('user-1', { keyword: 'test' });
+      expect(queryBuilder.andWhere).toHaveBeenCalledWith(
+        '(event.title ILIKE :keyword OR event.summary ILIKE :keyword)',
+        { keyword: '%wedding%' },
+      );
+    });
 
-      expect(queryBuilderMock.andWhere).toHaveBeenCalled();
+    it('should use default pagination (page=1, limit=20)', async () => {
+      await service.findAll('user-1');
+
+      expect(queryBuilder.skip).toHaveBeenCalledWith(0);
+      expect(queryBuilder.take).toHaveBeenCalledWith(20);
+    });
+
+    it('should apply custom pagination', async () => {
+      await service.findAll('user-1', { page: 3, limit: 10 });
+
+      expect(queryBuilder.skip).toHaveBeenCalledWith(20);
+      expect(queryBuilder.take).toHaveBeenCalledWith(10);
+    });
+
+    it('should combine multiple filters', async () => {
+      await service.findAll('user-1', {
+        year: 2024,
+        stage: EventStage.STUDENT,
+        keyword: 'wedding',
+      });
+
+      // 三个 andWhere 至少调用 3 次（除了 userId 用的 where）
+      expect(queryBuilder.andWhere).toHaveBeenCalledTimes(3);
     });
   });
 
   describe('findOne', () => {
-    it('should return an event by id', async () => {
+    it('should return event with all relations', async () => {
       eventsRepository.findOne.mockResolvedValue(mockEvent);
 
       const result = await service.findOne('user-1', 'event-1');
@@ -126,68 +171,154 @@ describe('EventsService', () => {
       });
     });
 
-    it('should throw NotFoundException if event not found', async () => {
+    it('should throw NotFoundException if not found', async () => {
       eventsRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.findOne('user-1', 'event-1')).rejects.toThrow(
+      await expect(service.findOne('user-1', 'missing')).rejects.toThrow(
         NotFoundException,
       );
     });
   });
 
   describe('create', () => {
-    it('should create a new event', async () => {
-      const createDto = {
+    it('should create an event without people', async () => {
+      const dto = {
         title: 'New Event',
         date: '2024-01-01',
-        location: 'New Location',
+        stage: EventStage.STUDENT,
       };
-      eventsRepository.create.mockReturnValue(mockEvent);
-      eventsRepository.save.mockResolvedValue(mockEvent);
-      eventsRepository.findOne.mockResolvedValue(mockEvent);
+      const created = { ...mockEvent, ...dto };
+      eventsRepository.create.mockReturnValue(created);
+      eventsRepository.save.mockResolvedValue(created);
+      eventsRepository.findOne.mockResolvedValue(created);
 
-      await service.create('user-1', createDto);
+      await service.create('user-1', dto);
 
-      expect(eventsRepository.create).toHaveBeenCalled();
+      expect(eventsRepository.create).toHaveBeenCalledWith({
+        userId: 'user-1',
+        ...dto,
+      });
       expect(eventsRepository.save).toHaveBeenCalled();
+      // 没 personIds → 不应查 people
+      expect(peopleRepository.findBy).not.toHaveBeenCalled();
     });
 
-    it('should associate people with event if personIds provided', async () => {
-      const createDto = {
+    it('should attach people when personIds provided', async () => {
+      const dto = {
         title: 'New Event',
         date: '2024-01-01',
-        personIds: ['person-1'],
+        stage: EventStage.STUDENT,
+        personIds: ['person-1', 'person-2'],
       };
-      eventsRepository.create.mockReturnValue(mockEvent);
-      eventsRepository.save.mockResolvedValue(mockEvent);
-      eventsRepository.findOne.mockResolvedValue(mockEvent);
-      peopleRepository.findBy.mockResolvedValue([mockPerson]);
+      const created = { ...mockEvent, ...dto };
+      const people = [mockPerson, { ...mockPerson, id: 'person-2' }];
+      eventsRepository.create.mockReturnValue(created);
+      eventsRepository.save.mockResolvedValue(created);
+      peopleRepository.findBy.mockResolvedValue(people);
+      eventsRepository.findOne.mockResolvedValue({ ...created, people });
 
-      await service.create('user-1', createDto);
+      await service.create('user-1', dto);
 
-      expect(peopleRepository.findBy).toHaveBeenCalled();
+      expect(peopleRepository.findBy).toHaveBeenCalledWith({
+        id: expect.anything(),
+        userId: 'user-1',
+      });
+    });
+
+    it('should skip people lookup when personIds is empty array', async () => {
+      const dto = {
+        title: 'New Event',
+        date: '2024-01-01',
+        stage: EventStage.STUDENT,
+        personIds: [],
+      };
+      const created = { ...mockEvent, ...dto };
+      eventsRepository.create.mockReturnValue(created);
+      eventsRepository.save.mockResolvedValue(created);
+      eventsRepository.findOne.mockResolvedValue(created);
+
+      await service.create('user-1', dto);
+
+      expect(peopleRepository.findBy).not.toHaveBeenCalled();
+    });
+
+    it('should return event via findOne after creation', async () => {
+      const dto: any = { title: 'X', date: '2024-01-01', stage: EventStage.STUDENT };
+      const created = { ...mockEvent, ...dto, id: 'event-99' };
+      eventsRepository.create.mockReturnValue(created);
+      eventsRepository.save.mockResolvedValue(created);
+      eventsRepository.findOne.mockResolvedValue(created);
+
+      const result = await service.create('user-1', dto);
+
+      expect(eventsRepository.findOne).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'event-99', userId: 'user-1' },
+        }),
+      );
+      expect(result.id).toBe('event-99');
     });
   });
 
   describe('update', () => {
-    it('should update an existing event', async () => {
-      const updateDto = { title: 'Updated Title' };
-      eventsRepository.findOne.mockResolvedValue(mockEvent);
-      eventsRepository.save.mockResolvedValue({ ...mockEvent, ...updateDto });
-      eventsRepository.findOne.mockResolvedValueOnce(mockEvent);
-      eventsRepository.findOne.mockResolvedValueOnce({
-        ...mockEvent,
-        ...updateDto,
-      });
+    it('should update event fields without changing people', async () => {
+      const dto = { title: 'Updated Title' };
+      const existing = { ...mockEvent };
+      const updated = { ...mockEvent, ...dto };
+      eventsRepository.findOne.mockResolvedValue(existing);
+      eventsRepository.save.mockResolvedValue(updated);
+      // findOne 第二次调用应该返回 updated（用于返回）
+      eventsRepository.findOne
+        .mockResolvedValueOnce(existing)
+        .mockResolvedValueOnce(updated);
 
-      await service.update('user-1', 'event-1', updateDto);
+      await service.update('user-1', 'event-1', dto);
 
-      expect(eventsRepository.save).toHaveBeenCalled();
+      expect(eventsRepository.save).toHaveBeenCalledWith(updated);
+      expect(peopleRepository.findBy).not.toHaveBeenCalled();
+    });
+
+    it('should replace people when personIds is provided', async () => {
+      const dto = { personIds: ['person-1'] };
+      const existing = { ...mockEvent, people: [mockPerson] };
+      const people = [mockPerson];
+      eventsRepository.findOne
+        .mockResolvedValueOnce(existing)
+        .mockResolvedValueOnce({ ...existing, people });
+      eventsRepository.save.mockResolvedValue(existing);
+      peopleRepository.findBy.mockResolvedValue(people);
+
+      await service.update('user-1', 'event-1', dto);
+
+      expect(peopleRepository.findBy).toHaveBeenCalled();
+    });
+
+    it('should clear people when personIds is empty array', async () => {
+      const dto = { personIds: [] };
+      const existing = { ...mockEvent, people: [mockPerson] };
+      eventsRepository.findOne
+        .mockResolvedValueOnce(existing)
+        .mockResolvedValueOnce({ ...existing, people: [] });
+      eventsRepository.save.mockResolvedValue(existing);
+      // 注意：dto.personIds = [] 仍然 !== undefined，所以会查 findBy 返回空
+      peopleRepository.findBy.mockResolvedValue([]);
+
+      await service.update('user-1', 'event-1', dto);
+
+      expect(peopleRepository.findBy).toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException if event missing', async () => {
+      eventsRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.update('user-1', 'missing', { title: 'X' }),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('delete', () => {
-    it('should delete an event', async () => {
+    it('should remove the event', async () => {
       eventsRepository.findOne.mockResolvedValue(mockEvent);
       eventsRepository.remove.mockResolvedValue(mockEvent);
 
@@ -196,36 +327,86 @@ describe('EventsService', () => {
       expect(eventsRepository.remove).toHaveBeenCalledWith(mockEvent);
     });
 
-    it('should throw NotFoundException if event not found', async () => {
+    it('should throw NotFoundException if event missing', async () => {
       eventsRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.delete('user-1', 'event-1')).rejects.toThrow(
+      await expect(service.delete('user-1', 'missing')).rejects.toThrow(
         NotFoundException,
       );
     });
   });
 
   describe('getTimeline', () => {
-    it('should return events grouped by year', async () => {
-      const events = [
-        { ...mockEvent, date: '2024-01-01' },
-        { ...mockEvent, id: 'event-2', date: '2024-06-01' },
-        { ...mockEvent, id: 'event-3', date: '2023-01-01' },
-      ];
-      queryBuilderMock.getManyAndCount.mockResolvedValue([events, 3]);
+    it('should group events by year and sort years descending', async () => {
+      const e2024 = { ...mockEvent, id: 'e-2024', date: '2024-06-15' };
+      const e2024b = { ...mockEvent, id: 'e-2024b', date: '2024-12-31' };
+      const e2023 = { ...mockEvent, id: 'e-2023', date: '2023-03-10' };
+      const e2022 = { ...mockEvent, id: 'e-2022', date: '2022-07-20' };
+      queryBuilder.getManyAndCount.mockResolvedValue([
+        [e2024, e2024b, e2023, e2022],
+        4,
+      ]);
 
       const result = await service.getTimeline('user-1');
 
-      expect(result.timeline).toBeDefined();
-      expect(result.total).toBe(3);
+      expect(result.total).toBe(4);
+      expect(result.timeline).toHaveLength(3);
+      expect(result.timeline.map((t) => t.year)).toEqual([2024, 2023, 2022]);
+      expect(result.timeline[0].events).toHaveLength(2);
+      expect(result.timeline[1].events).toHaveLength(1);
+      expect(result.timeline[2].events).toHaveLength(1);
     });
 
-    it('should filter timeline by year range', async () => {
-      queryBuilderMock.getManyAndCount.mockResolvedValue([[], 0]);
+    it('should filter by startYear', async () => {
+      await service.getTimeline('user-1', { startYear: 2020 });
 
-      await service.getTimeline('user-1', { startYear: 2020, endYear: 2024 });
+      expect(queryBuilder.andWhere).toHaveBeenCalledWith(
+        'EXTRACT(YEAR FROM event.date) >= :startYear',
+        { startYear: 2020 },
+      );
+    });
 
-      expect(queryBuilderMock.andWhere).toHaveBeenCalled();
+    it('should filter by endYear', async () => {
+      await service.getTimeline('user-1', { endYear: 2024 });
+
+      expect(queryBuilder.andWhere).toHaveBeenCalledWith(
+        'EXTRACT(YEAR FROM event.date) <= :endYear',
+        { endYear: 2024 },
+      );
+    });
+
+    it('should return empty timeline when no events', async () => {
+      queryBuilder.getManyAndCount.mockResolvedValue([[], 0]);
+
+      const result = await service.getTimeline('user-1');
+
+      expect(result.timeline).toEqual([]);
+      expect(result.total).toBe(0);
+    });
+
+    it('should join relations for timeline events', async () => {
+      queryBuilder.getManyAndCount.mockResolvedValue([[mockEvent], 1]);
+
+      await service.getTimeline('user-1');
+
+      expect(queryBuilder.leftJoinAndSelect).toHaveBeenCalledWith(
+        'event.place',
+        'place',
+      );
+      expect(queryBuilder.leftJoinAndSelect).toHaveBeenCalledWith(
+        'event.people',
+        'people',
+      );
+      expect(queryBuilder.leftJoinAndSelect).toHaveBeenCalledWith(
+        'event.moments',
+        'moments',
+      );
+    });
+
+    it('should order events by date DESC', async () => {
+      await service.getTimeline('user-1');
+
+      expect(queryBuilder.orderBy).toHaveBeenCalledWith('event.date', 'DESC');
     });
   });
 });
