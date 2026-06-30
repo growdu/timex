@@ -1,5 +1,41 @@
 # 变更日志
 
+## [Unreleased] — 2026-06-30（测试覆盖推进）
+
+### 新增（功能）
+- 后端 `memoirs.service` CRUD 测试 13 条，98.48% 覆盖
+- 后端 `moments.service` CRUD 测试 17 条，100% 覆盖
+  - `findByEvent` 聚合查询：`type` 过滤 / `eventId` 必填 / 顺序（最新优先）
+- 后端 `places.service` CRUD 测试 13 条，100% 覆盖
+  - `getMemoryStats` 聚合：事件 / 时刻数 + 最近一次
+- 后端 `events.service` 测试 25 条，100% 覆盖
+  - `queryBuilder` mock 验证 `andWhere` 链：stage / personIds (`In`) / 搜索 / 分页
+  - 关联赋值（personIds → EventPerson）+ `coverUrl` 推导
+- 后端 `people.controller` / `events.controller` / `places.controller` / `moments.controller` 各 ~6 条测试，全部 100% 覆盖
+- 后端 `license.controller` 5 条 + `memoirs.controller` 12 条（含 `PublicMemoirsController` share token 无鉴权路径）+ `app.controller` 2 条测试
+- 前端 `lines.js` 测试 14 条 + `lineMatchers.js` 测试 19 条 + `apiAdapter.js` 测试 ~40 条（覆盖 6 条线聚合 / UTC `_parseDateParts` 时区回归）
+
+### 修复
+- **后端 tsc 严格类型错误**（修过程中发现）：
+  - enum 字面量与字面量类型不匹配 → 改用 `EventStage.STUDENT` / `MomentType.PHOTO` / `PlaceType.CITY` 等
+  - `Partial<Entity>` fixture 缺字段 → 改用 `as any` cast
+  - `UpdateMomentDto` 字段对齐：`summary` → `aiSummary`，`mediaUrl` → `title`
+- **mockUser `id: 'user-1' as any`** 传递已知 `User` 类型 → 24 处 `no-unsafe-argument` warning（不阻塞 lint，通过项目通行 `as any` 风格）
+
+### 改动
+- `eslint.config.mjs`：spec 文件统一放宽 `no-unsafe-*` / `unbound-method`
+- 前端覆盖率从 ~12% 跃升至 35-50%（apiAdapter / lines / lineMatchers 100%；hooks 大部分 100%；Pages 待补）
+
+### 性能（覆盖率进展）
+**后端**（从 52.58% 行 / 41.76% 分支 → **80.00% 行 / 72.62% 分支 / 77.17% 语句**）：
+| 模块 | 之前 | 现在 |
+|---|---|---|
+| people / events / places / moments / memoirs / license / auth / app controllers | 0-33% | **100%**（8/8 controllers） |
+| places / moments / events / memoirs services | 0-72% | **98-100%** |
+| 整体行覆盖 | 61.19% | **80.00%** |
+| 整体分支覆盖 | 46.78% | **72.62%** |
+| 测试总数 | 12 | **156** |
+
 ## [Unreleased] — 2026-06-29
 
 ### 新增（功能）

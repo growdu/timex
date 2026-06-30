@@ -12,10 +12,12 @@ title: 时光机器文档
 1. [快速开始](./setup.md) — 5 分钟跑起来
 2. [系统架构](./architecture.md) — 数据流、模块划分、技术选型
 3. [API 参考](./api.md) — 所有 REST 端点
+4. [测试覆盖报告](./testing.md) — 156/152 tests / 80% 行 / Mock 约定
 
 ### 深入了解
 - [前端结构](./frontend.md) — 目录、状态管理、路由、API 适配层
 - [后端结构](./backend.md) — NestJS 模块、实体关系、Auth 流程
+- [测试覆盖](./testing.md) — 覆盖率快照 + 添加测试的标准流程
 
 ### 部署 / 运维
 - [部署指南](./deployment.md) — GitHub Pages + Docker

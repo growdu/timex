@@ -19,6 +19,7 @@
 - 🗺 [docs/roadmap.md](./docs/roadmap.md) — 路线图
 - 📝 [docs/changelog.md](./docs/changelog.md) — 变更日志
 - 🩺 [docs/health-check.md](./docs/health-check.md) — 代码健康检查
+- ✅ [docs/testing.md](./docs/testing.md) — 测试覆盖报告
 
 ## 🚀 快速开始
 
