@@ -130,3 +130,61 @@ docker run -p 3000:3000 --env-file .env timex-backend:dev
 - 看 `docker logs <container>`
 - 常见：数据库连接不上 —— 检查 `DATABASE_HOST` 是否在容器内可达
 - 常见：端口被占用 —— `lsof -i :3000`
+
+---
+
+## 生产环境检查清单
+
+部署前逐项确认：
+
+### 环境变量（必须）
+- [ ] `NODE_ENV=production` — 触发配置校验 + 关闭 SQL 日志
+- [ ] `JWT_SECRET` — **≥32 字符**，非默认值（启动时自动校验，不满足直接退出）
+- [ ] `DATABASE_PASSWORD` — 非 `postgres` 默认值
+- [ ] `S3_SECRET_KEY` — 非 `minioadmin` 默认值
+- [ ] `CORS_ORIGINS` — 生产域名列表，逗号分隔（如 `https://growdu.github.io,https://timex.example.com`）
+- [ ] `DATABASE_HOST` / `DATABASE_PORT` / `DATABASE_USER` / `DATABASE_NAME`
+- [ ] `REDIS_HOST` / `REDIS_PORT`（可选 `REDIS_PASSWORD`）
+- [ ] `S3_ENDPOINT` / `S3_ACCESS_KEY` / `S3_BUCKET` / `S3_PUBLIC_URL`
+
+### 安全
+- [ ] JWT secret 签发/验证一致（统一使用 `JWT_SECRET` 环境变量）
+- [ ] 密码策略：≥8 字符 + 字母 + 数字（DTO 层强制）
+- [ ] 所有 API 响应经过 `AllExceptionsFilter`（统一错误格式，不泄露内部细节）
+- [ ] 安全响应头：X-Content-Type-Options / X-Frame-Options / Referrer-Policy
+- [ ] 认证端点限流：register 5/min/IP、login 10/min/IP、refresh 20/min/IP
+- [ ] 全局限流：100/min/IP（short）+ 300/5min/IP（medium）
+- [ ] Docker 容器以非 root 用户运行
+- [ ] `synchronize: false`（TypeORM 不自动改表结构）
+
+### 可靠性
+- [ ] 优雅关闭：`enableShutdownHooks()`（SIGTERM 时正确关闭 DB 连接）
+- [ ] Docker `HEALTHCHECK` 配置
+- [ ] 数据库定期备份策略
+- [ ] Redis 持久化配置（如需限流跨重启保留）
+
+### 监控
+- [ ] HTTP 请求日志（method + path + status + 耗时）
+- [ ] `/health` 端点监控（API + S3 可达性）
+- [ ] 未捕获异常日志（AllExceptionsFilter 自动记录 5xx）
+
+### Docker 部署命令
+
+```bash
+# 后端
+cd backend
+docker build -t timex-backend:prod .
+docker run -d \
+  --name timex-backend \
+  -p 3000:3000 \
+  --env-file .env.production \
+  timex-backend:prod
+
+# 前端
+cd frontend
+docker build -t timex-frontend:prod .
+docker run -d \
+  --name timex-frontend \
+  -p 80:80 \
+  timex-frontend:prod
+```

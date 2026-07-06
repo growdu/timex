@@ -17,7 +17,7 @@ export class Memoir {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'user_id', type: 'varchar'})
+  @Column({ name: 'user_id', type: 'varchar' })
   userId: string;
 
   @ManyToOne(() => User, (user) => user.memoirs, { onDelete: 'CASCADE' })
@@ -37,13 +37,18 @@ export class Memoir {
   })
   status: MemoirStatus;
 
-  @Column({ name: 'cover_url', nullable: true, type: 'varchar'})
+  @Column({ name: 'cover_url', nullable: true, type: 'varchar' })
   coverUrl: string | null;
 
-  @Column({ name: 'is_public', default: false, type: 'boolean'})
+  @Column({ name: 'is_public', default: false, type: 'boolean' })
   isPublic: boolean;
 
-  @Column({ name: 'share_token', unique: true, nullable: true, type: 'varchar'})
+  @Column({
+    name: 'share_token',
+    unique: true,
+    nullable: true,
+    type: 'varchar',
+  })
   shareToken: string | null;
 
   @CreateDateColumn({ name: 'created_at' })

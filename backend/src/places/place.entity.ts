@@ -20,7 +20,7 @@ export class Place {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'user_id', type: 'varchar'})
+  @Column({ name: 'user_id', type: 'varchar' })
   userId: string;
 
   @ManyToOne(() => User, (user) => user.places, { onDelete: 'CASCADE' })

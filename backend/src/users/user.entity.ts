@@ -19,28 +19,28 @@ export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ unique: true, type: 'varchar'})
+  @Column({ unique: true, type: 'varchar' })
   email: string;
 
-  @Column({ unique: true, nullable: true, type: 'varchar'})
+  @Column({ unique: true, nullable: true, type: 'varchar' })
   phone: string;
 
-  @Column({ name: 'password_hash', type: 'varchar'})
+  @Column({ name: 'password_hash', type: 'varchar' })
   passwordHash: string;
 
-  @Column({ nullable: true, type: 'varchar'})
+  @Column({ nullable: true, type: 'varchar' })
   nickname: string;
 
-  @Column({ name: 'avatar_url', nullable: true, type: 'varchar'})
+  @Column({ name: 'avatar_url', nullable: true, type: 'varchar' })
   avatarUrl: string;
 
-  @Column({ name: 'is_trial_active', default: true, type: 'boolean'})
+  @Column({ name: 'is_trial_active', default: true, type: 'boolean' })
   isTrialActive: boolean;
 
   @Column({ name: 'trial_expires_at', type: 'timestamp', nullable: true })
   trialExpiresAt: Date;
 
-  @Column({ name: 'is_email_verified', default: false, type: 'boolean'})
+  @Column({ name: 'is_email_verified', default: false, type: 'boolean' })
   isEmailVerified: boolean;
 
   @CreateDateColumn({ name: 'created_at' })

@@ -21,14 +21,14 @@ export class Moment {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'user_id', type: 'varchar'})
+  @Column({ name: 'user_id', type: 'varchar' })
   userId: string;
 
   @ManyToOne(() => User, (user) => user.moments, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @Column({ name: 'event_id', nullable: true, type: 'varchar'})
+  @Column({ name: 'event_id', nullable: true, type: 'varchar' })
   eventId: string;
 
   @ManyToOne(() => Event, (event) => event.moments, {
@@ -41,25 +41,25 @@ export class Moment {
   @Column({ type: 'enum', enum: MomentType })
   type: MomentType;
 
-  @Column({ nullable: true, type: 'varchar'})
+  @Column({ nullable: true, type: 'varchar' })
   title: string;
 
   @Column({ type: 'text', nullable: true })
   content: string;
 
-  @Column({ name: 'media_url', nullable: true, type: 'varchar'})
+  @Column({ name: 'media_url', nullable: true, type: 'varchar' })
   mediaUrl: string;
 
-  @Column({ name: 'thumbnail_url', nullable: true, type: 'varchar'})
+  @Column({ name: 'thumbnail_url', nullable: true, type: 'varchar' })
   thumbnailUrl: string;
 
-  @Column({ nullable: true, type: 'int'})
+  @Column({ nullable: true, type: 'int' })
   duration: number;
 
-  @Column({ nullable: true, type: 'int'})
+  @Column({ nullable: true, type: 'int' })
   width: number;
 
-  @Column({ nullable: true, type: 'int'})
+  @Column({ nullable: true, type: 'int' })
   height: number;
 
   @Column({ name: 'file_size', type: 'bigint', nullable: true })

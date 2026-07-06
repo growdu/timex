@@ -6,6 +6,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { User } from '../users/user.entity';
+import { jwtConfig } from '../config';
 import { License } from '../license/license.entity';
 import { Device } from '../devices/device.entity';
 
@@ -14,8 +15,8 @@ import { Device } from '../devices/device.entity';
     TypeOrmModule.forFeature([User, License, Device]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.register({
-      secret: 'default-secret-change-me',
-      signOptions: { expiresIn: '15m' },
+      secret: jwtConfig.secret,
+      signOptions: { expiresIn: jwtConfig.expiresIn },
     }),
   ],
   controllers: [AuthController],

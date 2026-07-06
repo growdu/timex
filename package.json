@@ -1,0 +1,11 @@
+{
+  "name": "timex",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Timex monorepo - backend (NestJS) + frontend (React) + AI smoke tests",
+  "type": "module",
+  "scripts": {
+    "smoke:ai": "node scripts/ai-smoke.mjs",
+    "smoke:ai:live": "node scripts/ai-smoke.mjs --live http://127.0.0.1:3000"
+  }
+}

@@ -31,7 +31,7 @@ export class AiController {
   /** 提交图像打标签任务 */
   @Post('moments/:momentId/image-tag')
   @HttpCode(HttpStatus.ACCEPTED)
-  @Throttle({ short: { limit: 20, ttl: 60_000 } })  // 20 次/分钟
+  @Throttle({ short: { limit: 20, ttl: 60_000 } }) // 20 次/分钟
   async tagImage(
     @Param('momentId') momentId: string,
     @Body() dto: ImageTagDto,
@@ -73,7 +73,7 @@ export class AiController {
 
   @Post('moments/:momentId/transcribe')
   @HttpCode(HttpStatus.ACCEPTED)
-  @Throttle({ short: { limit: 10, ttl: 60_000 } })  // 音频更贵
+  @Throttle({ short: { limit: 10, ttl: 60_000 } }) // 音频更贵
   async transcribe(
     @Param('momentId') momentId: string,
     @Body() dto: AudioTranscribeDto,
@@ -94,7 +94,7 @@ export class AiController {
 
   @Post('memoirs/:memoirId/summary')
   @HttpCode(HttpStatus.ACCEPTED)
-  @Throttle({ short: { limit: 5, ttl: 60_000 } })  // 最贵
+  @Throttle({ short: { limit: 5, ttl: 60_000 } }) // 最贵
   async summarizeMemoir(
     @Param('memoirId') memoirId: string,
     @Body() dto: MemoirSummaryDto,

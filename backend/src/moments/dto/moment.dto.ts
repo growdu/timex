@@ -5,6 +5,7 @@ import {
   IsNumber,
   IsDateString,
   IsArray,
+  MaxLength,
 } from 'class-validator';
 import { MomentType } from '../moment.entity';
 
@@ -14,10 +15,12 @@ export class CreateMomentDto {
 
   @IsString()
   @IsOptional()
+  @MaxLength(500)
   title?: string;
 
   @IsString()
   @IsOptional()
+  @MaxLength(20000)
   content?: string;
 
   @IsString()
@@ -26,10 +29,12 @@ export class CreateMomentDto {
 
   @IsString()
   @IsOptional()
+  @MaxLength(500)
   mediaUrl?: string;
 
   @IsString()
   @IsOptional()
+  @MaxLength(500)
   thumbnailUrl?: string;
 
   @IsNumber()
@@ -60,10 +65,12 @@ export class CreateMomentDto {
 export class UpdateMomentDto {
   @IsString()
   @IsOptional()
+  @MaxLength(500)
   title?: string;
 
   @IsString()
   @IsOptional()
+  @MaxLength(20000)
   content?: string;
 
   @IsString()

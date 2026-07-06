@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { UploadService } from './upload.service';
 import { UploadController } from './upload.controller';
 import { ensureBucket, getS3Client, S3_CLIENT } from './s3.client';
+import { AwsSdkError } from '../common/types/aws-error';
 
 export { S3_CLIENT };
 
@@ -25,8 +26,9 @@ export class UploadModule implements OnModuleInit {
     try {
       await ensureBucket();
       this.logger.log('S3 bucket ready');
-    } catch (err: any) {
-      this.logger.warn(`ensureBucket failed: ${err?.message || err}`);
+    } catch (err) {
+      const awsErr = err as AwsSdkError;
+      this.logger.warn(`ensureBucket failed: ${awsErr?.message || err}`);
     }
   }
 }

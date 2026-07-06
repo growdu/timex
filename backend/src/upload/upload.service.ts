@@ -1,22 +1,50 @@
-import { Inject, Injectable, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
-import { S3Client, PutObjectCommand, DeleteObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
+import {
+  Inject,
+  Injectable,
+  BadRequestException,
+  ForbiddenException,
+  Logger,
+} from '@nestjs/common';
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  HeadObjectCommand,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { randomBytes } from 'crypto';
 import { s3Config } from './upload.config';
+import { AwsSdkError } from '../common/types/aws-error';
 
 export type UploadKind = 'photo' | 'video' | 'audio' | 'document';
 
 const KIND_MIME: Record<UploadKind, string[]> = {
-  photo: ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif'],
+  photo: [
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/gif',
+    'image/heic',
+    'image/heif',
+  ],
   video: ['video/mp4', 'video/quicktime', 'video/webm', 'video/x-matroska'],
-  audio: ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/aac', 'audio/ogg', 'audio/x-m4a', 'audio/mp4'],
+  audio: [
+    'audio/mpeg',
+    'audio/mp3',
+    'audio/wav',
+    'audio/aac',
+    'audio/ogg',
+    'audio/x-m4a',
+    'audio/mp4',
+  ],
   document: ['application/pdf'],
 };
 
 const KIND_MAX_SIZE: Record<UploadKind, number> = {
-  photo: 20 * 1024 * 1024,      // 20 MB
-  video: 500 * 1024 * 1024,     // 500 MB
-  audio: 50 * 1024 * 1024,      // 50 MB
-  document: 10 * 1024 * 1024,   // 10 MB
+  photo: 20 * 1024 * 1024, // 20 MB
+  video: 500 * 1024 * 1024, // 500 MB
+  audio: 50 * 1024 * 1024, // 50 MB
+  document: 10 * 1024 * 1024, // 10 MB
 };
 
 export interface PresignResult {
@@ -86,7 +114,9 @@ export class UploadService {
     return {
       key: objectKey,
       url,
-      expiresAt: new Date(Date.now() + s3Config.presignedTtl * 1000).toISOString(),
+      expiresAt: new Date(
+        Date.now() + s3Config.presignedTtl * 1000,
+      ).toISOString(),
       maxSize,
     };
   }
@@ -104,34 +134,39 @@ export class UploadService {
   ): Promise<CompleteResult> {
     this._assertOwnership(userId, key);
 
-    let head;
     try {
-      head = await this.s3.send(
+      const head = await this.s3.send(
         new HeadObjectCommand({ Bucket: s3Config.bucket, Key: key }),
       );
-    } catch (err: any) {
-      if (err?.$metadata?.httpStatusCode === 404 || err?.name === 'NotFound') {
-        throw new BadRequestException(`object not found: ${key} (upload may have failed)`);
+
+      const fileSize = Number(head.ContentLength ?? 0);
+      const contentType = head.ContentType ?? 'application/octet-stream';
+
+      this.logger.log(
+        `complete key=${key} size=${fileSize} type=${contentType} user=${userId}`,
+      );
+
+      return {
+        key,
+        url: this._publicUrl(key),
+        fileSize,
+        contentType,
+        ...(meta.width !== undefined ? { width: meta.width } : {}),
+        ...(meta.height !== undefined ? { height: meta.height } : {}),
+        ...(meta.duration !== undefined ? { duration: meta.duration } : {}),
+      };
+    } catch (err) {
+      const awsErr = err as AwsSdkError;
+      if (
+        awsErr?.$metadata?.httpStatusCode === 404 ||
+        awsErr?.name === 'NotFound'
+      ) {
+        throw new BadRequestException(
+          `object not found: ${key} (upload may have failed)`,
+        );
       }
       throw err;
     }
-
-    const fileSize = Number(head.ContentLength ?? 0);
-    const contentType = head.ContentType ?? 'application/octet-stream';
-
-    this.logger.log(
-      `complete key=${key} size=${fileSize} type=${contentType} user=${userId}`,
-    );
-
-    return {
-      key,
-      url: this._publicUrl(key),
-      fileSize,
-      contentType,
-      ...(meta.width !== undefined ? { width: meta.width } : {}),
-      ...(meta.height !== undefined ? { height: meta.height } : {}),
-      ...(meta.duration !== undefined ? { duration: meta.duration } : {}),
-    };
   }
 
   /**
@@ -158,6 +193,6 @@ export class UploadService {
   }
 
   private _randomHex(bytes: number): string {
-    return require('crypto').randomBytes(bytes).toString('hex');
+    return randomBytes(bytes).toString('hex');
   }
 }

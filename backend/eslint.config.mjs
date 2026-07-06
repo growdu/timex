@@ -47,6 +47,8 @@ export default tseslint.config(
       ],
       // 测试里 await 不是必需的（用 done 回调）
       '@typescript-eslint/no-floating-promises': 'off',
+      // 测试里的 mock repo 方法用 async 返回 Promise 但内部无 await
+      '@typescript-eslint/require-await': 'off',
     },
   },
   eslintPluginPrettierRecommended,

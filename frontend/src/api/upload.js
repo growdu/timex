@@ -76,12 +76,8 @@ export const uploadApi = {
     if (!file.type) throw new Error('file.type is required');
 
     const presigned = await uploadApi.presign({ kind, mimeType: file.type, fileSize });
-    try {
-      await uploadApi.uploadToUrl(presigned.url, file, meta.onProgress);
-    } catch (err) {
-      // 上传失败 → 清理后端 records（无 S3 对象可删，但解绑 relation）
-      throw err;
-    }
+    // TODO: 上传失败时清理后端 records（无 S3 对象可删，但解绑 relation）
+    await uploadApi.uploadToUrl(presigned.url, file, meta.onProgress);
     return uploadApi.complete({
       key: presigned.key,
       width: meta.width,

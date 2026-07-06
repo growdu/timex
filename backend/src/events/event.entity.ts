@@ -22,7 +22,7 @@ export class Event {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'user_id', type: 'varchar'})
+  @Column({ name: 'user_id', type: 'varchar' })
   userId: string;
 
   @ManyToOne(() => User, (user) => user.events, { onDelete: 'CASCADE' })
@@ -35,10 +35,10 @@ export class Event {
   @Column({ type: 'date' })
   date: string;
 
-  @Column({ nullable: true, type: 'varchar'})
+  @Column({ nullable: true, type: 'varchar' })
   location: string;
 
-  @Column({ name: 'place_id', nullable: true, type: 'varchar'})
+  @Column({ name: 'place_id', nullable: true, type: 'varchar' })
   placeId: string;
 
   @ManyToOne(() => Place, { onDelete: 'SET NULL', nullable: true })
@@ -58,10 +58,10 @@ export class Event {
   @Column({ name: 'long_text', type: 'text', nullable: true })
   longText: string;
 
-  @Column({ name: 'cover_url', nullable: true, type: 'varchar'})
+  @Column({ name: 'cover_url', nullable: true, type: 'varchar' })
   coverUrl: string;
 
-  @Column({ default: 0, type: 'int'})
+  @Column({ default: 0, type: 'int' })
   weight: number;
 
   @CreateDateColumn({ name: 'created_at' })

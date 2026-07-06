@@ -1,5 +1,80 @@
 # 变更日志
 
+## [Unreleased] — 2026-07-05（商用就绪加固）
+
+### 修复（安全 — 关键）
+- **JWT secret 签名/验证不一致**：`auth.module.ts` 硬编码 `secret: 'default-secret-change-me'`
+  签发 token，但 `jwt.strategy.ts` 用环境变量验证 → 生产环境设置 `JWT_SECRET` 后所有认证失效。
+  改为统一使用 `jwtConfig.secret`。
+- **密码策略过弱**：`RegisterDto.password` 仅 `@MinLength(8)`，新增 `@MaxLength(128)` +
+  必须含字母 + 数字（防 DoS + 基础复杂度）。
+- **DTO 无长度上限**：所有 string 字段缺少 `@MaxLength`，恶意客户端可发送超长 payload
+  耗尽内存。为 auth / event / moment / license DTO 加 `@MaxLength`。
+- **未捕获异常泄露内部细节**：NestJS 默认 500 响应含 `exception.message`，
+  可能泄露数据库连接字符串等。新增 `AllExceptionsFilter` 统一返回通用消息。
+
+### 新增（生产基础设施）
+- **全局异常过滤器** `AllExceptionsFilter`：统一错误响应格式
+  `{ statusCode, message, error, path, timestamp }`；未捕获异常返回 500 + 通用消息
+  （不泄露内部细节）+ 4 条单元测试
+- **生产配置校验** `validateProductionConfig()`：`NODE_ENV=production` 时检查
+  JWT_SECRET（非默认值 + ≥32 字符）、DATABASE_PASSWORD（非 `postgres`）、
+  S3_SECRET_KEY（非 `minioadmin`），不满足直接抛异常退出
+- **安全响应头中间件** `SecurityHeadersMiddleware`（helmet 替代，无需额外依赖）：
+  X-Content-Type-Options / X-Frame-Options / Referrer-Policy / COOP 等
+- **HTTP 请求日志中间件** `RequestLoggerMiddleware`：记录 method + path + status + 耗时，
+  5xx error / 4xx warn / 2xx log
+- **优雅关闭** `app.enableShutdownHooks()`：Docker/K8s SIGTERM 时正确关闭数据库连接
+- **CORS 环境变量化** `CORS_ORIGINS`：逗号分隔的生产域名列表，替代硬编码 IP
+- **Dockerfile 加固**：`NODE_ENV=production` + 非 root 用户 + `HEALTHCHECK` + nginx gzip/缓存
+
+### 改动
+- `main.ts`：重构 — 移除硬编码 CORS origin 列表，改用 `CORS_ORIGINS` env +
+  本地开发网段正则；启用 shutdown hooks；注册全局 filter
+- `app.module.ts`：实现 `NestModule`，注册 SecurityHeaders + RequestLogger 中间件
+- `jwt.config.ts`：`expiresIn` / `refreshExpiresIn` 类型从 `string` 改为 `ms.StringValue`
+  （类型安全，消除 `as any`）
+- `auth.module.ts`：`JwtModule.register` 改用 `jwtConfig.secret` + `jwtConfig.expiresIn`
+- `.env.example`：新增 `NODE_ENV` / `CORS_ORIGINS` / `HOST` / `PORT`
+- `frontend/Dockerfile`：nginx 配置增加 gzip + 静态资源长缓存 + SPA fallback
+- `backend/Dockerfile`：非 root 用户 + NODE_ENV + HEALTHCHECK
+
+### 性能
+- health-check: 5/5 ✓（211 backend + 175 frontend = 386 tests）
+
+## [Unreleased] — 2026-07-05（lint/CI 修复 — AI 模块 + upload 模块）
+
+### 修复
+- **后端 lint 0 errors**（从 111 errors 降到 0）：
+  - AI 模块 71 errors：prettier 格式化 + 移除未使用 import（`AiJobStatus` /
+    `ProviderRegistry` / `t0`）+ `catch (e: unknown)` 类型安全 + jsonb 列改用
+    `save()` 避免 TypeORM `DeepPartial` 类型缺陷
+  - upload 模块 22 errors：`catch (err: any)` → `catch (err)` + `AwsSdkError`
+    类型安全访问；`require('crypto')` → ES import；`async checkApi` 无 await → 同步
+  - 其余 18 errors：prettier 格式化（`@Column` 装饰器空格等）
+- **前端 lint 0 errors**：`useAiJob.test.js` 空 catch 块加注释；
+  `upload.js` 移除无用 try/catch wrapper（`no-useless-catch`）
+- **throttler 测试沙箱兼容**：`listen EPERM` 时自动跳过（CI 正常执行）
+- **根 `package.json`**：description `Vue` → `React`（前端实际技术栈）
+
+### 新增
+- `backend/src/common/types/aws-error.ts`：AWS SDK v3 错误类型（`$metadata` /
+  `name` / `message`），供 catch 块类型安全访问
+- `backend/eslint.config.mjs`：spec 文件放宽 `require-await`（mock repo 方法）
+- 跟踪 `backend/scripts/migrations/2026_06_30_ai_jobs.sql`、`scripts/ai-smoke.mjs`、
+  `scripts/README.md`、根 `package.json`（之前未提交）
+
+### 改动
+- `ai.service.ts`：`update()` + `findOneBy()` → 直接修改实体 + `save()`（避免
+  `QueryDeepPartialEntity` 对 jsonb 列类型推导缺陷，同时减少一次查询）
+- `ai-job.entity.ts`：`structured?: unknown | null` → `Record<string, unknown> | null`
+  （跟随 `license.entity.ts` 项目约定，消除 `no-redundant-type-constituents`）
+- `upload.service.ts`：`complete()` 方法重构 — head 对象移入 try 块内 `const` 声明
+
+### 性能
+- health-check: 5/5 ✓（backend lint + typecheck + test 207 + frontend lint + test 175）
+- 总测试: 382 passing
+
 ## [Unreleased] — 2026-06-30（测试覆盖推进）
 
 ### 归档

@@ -59,7 +59,12 @@ export class UploadController {
    */
   @Post('sign')
   async sign(@CurrentUser() user: User, @Body() dto: PresignDto) {
-    return this.uploadService.presign(user.id, dto.kind, dto.mimeType, dto.fileSize);
+    return this.uploadService.presign(
+      user.id,
+      dto.kind,
+      dto.mimeType,
+      dto.fileSize,
+    );
   }
 
   /**

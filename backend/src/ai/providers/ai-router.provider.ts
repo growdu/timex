@@ -7,7 +7,6 @@ import {
 } from './llm-provider.interface';
 import { MockProvider } from './mock.provider';
 import { OllamaProvider } from './ollama.provider';
-import { ProviderRegistry } from './llm-provider.interface';
 
 /**
  * Provider 路由器：根据 env 决定用 Ollama 还是 Mock。
@@ -31,7 +30,11 @@ export class AiRouterProvider implements LlmProvider, OnModuleInit {
     private ollama: OllamaProvider,
     private mock: MockProvider,
   ) {
-    this.mode = (config.get<string>('AI_PROVIDER', 'auto') as 'ollama' | 'mock' | 'auto') || 'auto';
+    this.mode =
+      (config.get<string>('AI_PROVIDER', 'auto') as
+        | 'ollama'
+        | 'mock'
+        | 'auto') || 'auto';
     this.fallbackProvider = mock; // mock 永远作兜底
   }
 
@@ -45,13 +48,19 @@ export class AiRouterProvider implements LlmProvider, OnModuleInit {
     const available = await this.ollama.ping();
     if (available) {
       this.activeProvider = this.ollama;
-      this.log.log(`AI provider mode=auto, selected=ollama (${this.ollama.model})`);
+      this.log.log(
+        `AI provider mode=auto, selected=ollama (${this.ollama.model})`,
+      );
     } else {
       this.activeProvider = this.mock;
       if (this.mode === 'ollama') {
-        this.log.warn('AI provider mode=ollama forced but ollama not reachable, falling back to mock');
+        this.log.warn(
+          'AI provider mode=ollama forced but ollama not reachable, falling back to mock',
+        );
       } else {
-        this.log.warn('AI provider mode=auto, ollama not reachable, using mock');
+        this.log.warn(
+          'AI provider mode=auto, ollama not reachable, using mock',
+        );
       }
     }
   }
@@ -61,7 +70,6 @@ export class AiRouterProvider implements LlmProvider, OnModuleInit {
   }
 
   async complete(req: LlmCompletionRequest): Promise<LlmCompletionResponse> {
-    const t0 = Date.now();
     try {
       const res = await this.activeProvider.complete(req);
       return res;

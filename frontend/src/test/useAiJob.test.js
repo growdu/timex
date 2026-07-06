@@ -94,7 +94,7 @@ describe('useAiJob', () => {
     await act(async () => {
       // swallow the rejection
       try { await result.current.submit('transcribe', { momentId: 'm-2', audioUrl: 'http://x' }); }
-      catch {}
+      catch { /* swallow expected rejection */ }
     });
 
     await waitFor(() => {

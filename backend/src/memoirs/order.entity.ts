@@ -29,26 +29,26 @@ export class Order {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'user_id', type: 'varchar'})
+  @Column({ name: 'user_id', type: 'varchar' })
   userId: string;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @Column({ name: 'order_no', unique: true, type: 'varchar'})
+  @Column({ name: 'order_no', unique: true, type: 'varchar' })
   orderNo: string;
 
   @Column({ name: 'product_type', type: 'enum', enum: ProductType })
   productType: ProductType;
 
-  @Column({ name: 'product_id', nullable: true, type: 'varchar'})
+  @Column({ name: 'product_id', nullable: true, type: 'varchar' })
   productId: string;
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   amount: number;
 
-  @Column({ default: 'CNY', type: 'varchar'})
+  @Column({ default: 'CNY', type: 'varchar' })
   currency: string;
 
   @Column({
@@ -61,7 +61,7 @@ export class Order {
   @Column({ name: 'paid_at', type: 'timestamp', nullable: true })
   paidAt: Date;
 
-  @Column({ nullable: true, type: 'varchar'})
+  @Column({ nullable: true, type: 'varchar' })
   note: string;
 
   @CreateDateColumn({ name: 'created_at' })

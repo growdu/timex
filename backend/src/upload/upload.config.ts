@@ -19,8 +19,7 @@ export const s3Config: S3Config = {
   accessKeyId: process.env.S3_ACCESS_KEY || 'minioadmin',
   secretAccessKey: process.env.S3_SECRET_KEY || 'minioadmin',
   bucket: process.env.S3_BUCKET || 'timex-uploads',
-  publicUrl:
-    process.env.S3_PUBLIC_URL || 'http://localhost:9000/timex-uploads',
+  publicUrl: process.env.S3_PUBLIC_URL || 'http://localhost:9000/timex-uploads',
   presignedTtl: Number(process.env.S3_PRESIGNED_TTL) || 900,
   maxUploadSize: Number(process.env.MAX_UPLOAD_SIZE) || 100 * 1024 * 1024,
   // MinIO / Aliyun OSS 需要 path-style；AWS S3 需 virtual-hosted

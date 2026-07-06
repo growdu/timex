@@ -1,7 +1,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { AiJob, AiJobKind, AiJobStatus, AiJobTargetType } from './entities/ai-job.entity';
+import { AiJob, AiJobKind, AiJobTargetType } from './entities/ai-job.entity';
 import { AiRouterProvider } from './providers/ai-router.provider';
 import { LlmCompletionRequest } from './providers/llm-provider.interface';
 
@@ -34,8 +34,8 @@ export class AiService {
     });
     await this.repo.save(job);
     // 异步跑（不 await）
-    void this.runJob(job.id, input.promptInput).catch((e) => {
-      this.log.error(`background runJob crashed: ${e.message}`);
+    void this.runJob(job.id, input.promptInput).catch((e: unknown) => {
+      this.log.error(`background runJob crashed: ${(e as Error).message}`);
     });
     return job;
   }
@@ -56,7 +56,10 @@ export class AiService {
   }
 
   /** 单次 job 执行（可被 worker / 测试调用） */
-  async runJob(jobId: string, promptInput: LlmCompletionRequest['input']): Promise<AiJob> {
+  async runJob(
+    jobId: string,
+    promptInput: LlmCompletionRequest['input'],
+  ): Promise<AiJob> {
     const job = await this.repo.findOneBy({ id: jobId });
     if (!job) throw new NotFoundException(`ai job ${jobId} not found`);
     if (job.status === 'succeeded' || job.status === 'failed') {
@@ -71,24 +74,27 @@ export class AiService {
         input: promptInput,
       });
 
-      await this.repo.update(jobId, {
-        status: 'succeeded',
-        provider: res.provider,
-        model: res.model,
-        output: res.output,
-        structured: (res.structured ?? null) as any,
-        latencyMs: res.latencyMs,
-      });
+      // 直接更新已加载的实体并 save，避免 update() 的 DeepPartial 对 jsonb 类型推导缺陷
+      job.status = 'succeeded';
+      job.provider = res.provider;
+      job.model = res.model;
+      job.output = res.output;
+      job.structured = (res.structured ?? null) as Record<
+        string,
+        unknown
+      > | null;
+      job.latencyMs = res.latencyMs;
+      await this.repo.save(job);
 
       // 副作用：把结果写回 target 实体
       await this.applyToTarget(job, res.output, res.structured);
 
-      return await this.repo.findOneBy({ id: jobId }) as AiJob;
+      return job;
     } catch (e) {
       const msg = (e as Error).message;
       this.log.error(`job ${jobId} failed: ${msg}`);
       await this.repo.update(jobId, { status: 'failed', error: msg });
-      return await this.repo.findOneBy({ id: jobId }) as AiJob;
+      return (await this.repo.findOneBy({ id: jobId })) as AiJob;
     }
   }
 
@@ -107,12 +113,19 @@ export class AiService {
   }
 
   /** 根据任务类型，把输出写回对应的目标实体 */
-  private async applyToTarget(job: AiJob, output: string, structured: unknown): Promise<void> {
+  private async applyToTarget(
+    job: AiJob,
+    output: string,
+    structured: unknown,
+  ): Promise<void> {
     switch (job.kind) {
       case 'image-tag': {
         const tags = Array.isArray(structured)
           ? (structured as string[])
-          : output.split(',').map((t) => t.trim()).filter(Boolean);
+          : output
+              .split(',')
+              .map((t) => t.trim())
+              .filter(Boolean);
         // 写到 moment.ai_tags
         await this.repo.manager.query(
           `UPDATE moments SET ai_tags = $1::text[], updated_at = NOW() WHERE id = $2 AND user_id = $3`,

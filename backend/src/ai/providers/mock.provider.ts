@@ -54,13 +54,20 @@ export class MockProvider implements LlmProvider {
 
     return {
       output: text,
-      structured: req.task === 'image-tag'
-        ? text.split(',').map((t) => t.trim()).filter(Boolean)
-        : undefined,
+      structured:
+        req.task === 'image-tag'
+          ? text
+              .split(',')
+              .map((t) => t.trim())
+              .filter(Boolean)
+          : undefined,
       model: 'mock-1',
       provider: this.name,
       latencyMs: Date.now() - t0,
-      usage: { inputTokens: extractText(req.input).length, outputTokens: text.length },
+      usage: {
+        inputTokens: extractText(req.input).length,
+        outputTokens: text.length,
+      },
     };
   }
 }
@@ -92,10 +99,46 @@ function sleep(ms: number) {
 
 // ---- 静态语料 ----
 const TAG_POOL = [
-  '家庭', '旅行', '童年', '海边', '生日', '节日', '聚会', '学校', '工作', '朋友',
-  '宠物', '美食', '城市', '乡村', '四季', '春日', '夏日', '秋日', '冬日', '黄昏',
-  '清晨', '微笑', '拥抱', '公园', '山野', '老屋', '火车站', '婚礼', '毕业', '归来',
-  '老友', '新芽', '绿叶', '晚霞', '星光', '厨房', '餐桌', '雪景', '雨中', '晴天',
+  '家庭',
+  '旅行',
+  '童年',
+  '海边',
+  '生日',
+  '节日',
+  '聚会',
+  '学校',
+  '工作',
+  '朋友',
+  '宠物',
+  '美食',
+  '城市',
+  '乡村',
+  '四季',
+  '春日',
+  '夏日',
+  '秋日',
+  '冬日',
+  '黄昏',
+  '清晨',
+  '微笑',
+  '拥抱',
+  '公园',
+  '山野',
+  '老屋',
+  '火车站',
+  '婚礼',
+  '毕业',
+  '归来',
+  '老友',
+  '新芽',
+  '绿叶',
+  '晚霞',
+  '星光',
+  '厨房',
+  '餐桌',
+  '雪景',
+  '雨中',
+  '晴天',
 ];
 const MOCK_TAGS = (seed: number): string[] => {
   const n = 6;

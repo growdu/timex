@@ -16,7 +16,7 @@ export class Person {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'user_id', type: 'varchar'})
+  @Column({ name: 'user_id', type: 'varchar' })
   userId: string;
 
   @ManyToOne(() => User, (user) => user.people, { onDelete: 'CASCADE' })
@@ -26,13 +26,13 @@ export class Person {
   @Column()
   name: string;
 
-  @Column({ nullable: true, type: 'varchar'})
+  @Column({ nullable: true, type: 'varchar' })
   role: string;
 
   @Column({ type: 'text', nullable: true })
   intro: string;
 
-  @Column({ name: 'avatar_url', nullable: true, type: 'varchar'})
+  @Column({ name: 'avatar_url', nullable: true, type: 'varchar' })
   avatarUrl: string;
 
   @Column({ name: 'first_seen_at', type: 'date', nullable: true })

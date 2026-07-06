@@ -50,7 +50,7 @@ export class AiJob {
   output?: string | null;
 
   @Column({ name: 'structured', type: 'jsonb', nullable: true })
-  structured?: unknown | null;
+  structured?: Record<string, unknown> | null;
 
   @Column({ name: 'error', type: 'text', nullable: true })
   error?: string | null;

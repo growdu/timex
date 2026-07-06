@@ -8,7 +8,9 @@ jest.mock('@aws-sdk/s3-request-presigner', () => ({
   getSignedUrl: jest
     .fn()
     .mockImplementation((_client, _cmd, opts) =>
-      Promise.resolve(`https://signed.example.com/?X-Expires=${opts.expiresIn}`),
+      Promise.resolve(
+        `https://signed.example.com/?X-Expires=${opts.expiresIn}`,
+      ),
     ),
 }));
 
@@ -20,10 +22,7 @@ describe('UploadService', () => {
     s3 = { send: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        UploadService,
-        { provide: 'S3_CLIENT', useValue: s3 },
-      ],
+      providers: [UploadService, { provide: 'S3_CLIENT', useValue: s3 }],
     }).compile();
 
     service = module.get<UploadService>(UploadService);
@@ -58,7 +57,14 @@ describe('UploadService', () => {
     });
 
     it('accepts all whitelisted photo mimes', async () => {
-      for (const m of ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif']) {
+      for (const m of [
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+        'image/gif',
+        'image/heic',
+        'image/heif',
+      ]) {
         const r = await service.presign('user-1', 'photo', m, 1024);
         expect(r.key).toMatch(/^uploads\/user-1\/photo\//);
         expect(r.maxSize).toBe(20 * 1024 * 1024);
@@ -119,17 +125,15 @@ describe('UploadService', () => {
         $metadata: { httpStatusCode: 404 },
         name: 'NotFound',
       });
-      await expect(
-        service.complete('user-1', validKey),
-      ).rejects.toThrow(/object not found/);
+      await expect(service.complete('user-1', validKey)).rejects.toThrow(
+        /object not found/,
+      );
     });
 
     it('rethrows non-404 errors from S3', async () => {
       const boom = new Error('network down');
       s3.send.mockRejectedValueOnce(boom);
-      await expect(
-        service.complete('user-1', validKey),
-      ).rejects.toBe(boom);
+      await expect(service.complete('user-1', validKey)).rejects.toBe(boom);
     });
 
     it('returns url, fileSize, contentType from HeadObject', async () => {
@@ -145,7 +149,10 @@ describe('UploadService', () => {
     });
 
     it('passes through optional width/height/duration', async () => {
-      s3.send.mockResolvedValueOnce({ ContentLength: 1, ContentType: 'image/jpeg' });
+      s3.send.mockResolvedValueOnce({
+        ContentLength: 1,
+        ContentType: 'image/jpeg',
+      });
       const r = await service.complete('user-1', validKey, {
         width: 800,
         height: 600,
@@ -157,7 +164,10 @@ describe('UploadService', () => {
     });
 
     it('omits undefined optional meta fields', async () => {
-      s3.send.mockResolvedValueOnce({ ContentLength: 1, ContentType: 'image/jpeg' });
+      s3.send.mockResolvedValueOnce({
+        ContentLength: 1,
+        ContentType: 'image/jpeg',
+      });
       const r = await service.complete('user-1', validKey);
       expect(r).not.toHaveProperty('width');
       expect(r).not.toHaveProperty('height');
@@ -165,7 +175,10 @@ describe('UploadService', () => {
     });
 
     it('falls back to application/octet-stream when ContentType missing', async () => {
-      s3.send.mockResolvedValueOnce({ ContentLength: 0, ContentType: undefined });
+      s3.send.mockResolvedValueOnce({
+        ContentLength: 0,
+        ContentType: undefined,
+      });
       const r = await service.complete('user-1', validKey);
       expect(r.contentType).toBe('application/octet-stream');
     });

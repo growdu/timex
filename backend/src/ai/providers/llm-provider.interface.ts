@@ -23,12 +23,12 @@ export type LlmInput =
   | { kind: 'multi'; parts: LlmInput[] };
 
 export type AiTask =
-  | 'image-tag'           // 给照片打标签
-  | 'image-summary'       // 给照片写一句话描述
-  | 'audio-transcribe'    // 转录音频
-  | 'memoir-summary'      // 给整本回忆录写摘要
-  | 'chapter-summary'     // 给章节写摘要
-  | 'event-summary';      // 给事件写摘要
+  | 'image-tag' // 给照片打标签
+  | 'image-summary' // 给照片写一句话描述
+  | 'audio-transcribe' // 转录音频
+  | 'memoir-summary' // 给整本回忆录写摘要
+  | 'chapter-summary' // 给章节写摘要
+  | 'event-summary'; // 给事件写摘要
 
 export interface LlmCompletionResponse {
   /** 输出文本（按任务类型可能是 JSON string / 纯文本） */

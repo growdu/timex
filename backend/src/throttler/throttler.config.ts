@@ -3,7 +3,9 @@ import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis'
 import Redis from 'ioredis';
 import { ConfigService } from '@nestjs/config';
 
-export function buildThrottlerOptions(config: ConfigService): ThrottlerModuleOptions {
+export function buildThrottlerOptions(
+  config: ConfigService,
+): ThrottlerModuleOptions {
   const redisHost = config.get<string>('REDIS_HOST', 'localhost');
   const redisPort = config.get<number>('REDIS_PORT', 6379);
   const redisPassword = config.get<string>('REDIS_PASSWORD');

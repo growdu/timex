@@ -1,39 +1,41 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import { AppModule } from './app.module';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { validateProductionConfig } from './config';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // 生产环境配置校验：关键 secret 不能是默认值
+  validateProductionConfig();
 
-  // Enable CORS for frontend
-  const allowedOrigins = [
-    'http://localhost:5173',
-    'http://localhost:80',
-    'http://localhost:3000',
-    'http://127.0.0.1:5173',
-    'http://127.0.0.1:3000',
-    'http://127.0.0.1:80',
-    'http://192.168.1.99:5173',
-    'http://192.168.1.99:80',
-    'http://192.168.1.99:3000',
-    'http://10.10.0.1:5173',
-    'http://10.10.1.1:5173',
-    'http://10.10.2.1:5173',
-  ];
+  const logger = new Logger('Bootstrap');
+  const app = await NestFactory.create(AppModule, {
+    bufferLogs: true,
+  });
+
+  // CORS — 通过 CORS_ORIGINS 环境变量配置允许的源
+  const corsOriginsEnv = process.env.CORS_ORIGINS || '';
+  const extraOrigins = corsOriginsEnv
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
 
   app.enableCors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (mobile apps, curl, etc.)
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, ok?: boolean) => void,
+    ) => {
+      // 无 origin 的请求（移动端、curl）放行
       if (!origin) return callback(null, true);
 
-      // Check if origin is in allowed list or matches pattern
-      if (
-        allowedOrigins.includes(origin) ||
+      // 本地开发网段
+      const isLocalDev =
         /^https?:\/\/(192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|localhost|127\.0\.0\.1)(:\d+)?$/.test(
           origin,
-        )
-      ) {
+        );
+
+      if (extraOrigins.includes(origin) || isLocalDev) {
         return callback(null, true);
       }
 
@@ -44,7 +46,7 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   });
 
-  // Global validation pipe
+  // 全局验证管道
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -53,10 +55,17 @@ async function bootstrap() {
     }),
   );
 
+  // 全局异常过滤器 — 统一错误响应格式
+  app.useGlobalFilters(new AllExceptionsFilter());
+
+  // 优雅关闭：Docker / K8s 发 SIGTERM 时正确清理资源
+  app.enableShutdownHooks();
+
   const host = process.env.HOST ?? '0.0.0.0';
-  const port = process.env.PORT ?? 3000;
+  const port = parseInt(process.env.PORT ?? '3000', 10);
   await app.listen(port, host);
-  console.log(`Application is running on: http://${host}:${port}`);
+  logger.log(`Application running on http://${host}:${port}`);
+  logger.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 }
 
 void bootstrap();

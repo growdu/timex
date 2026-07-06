@@ -9,16 +9,13 @@ import { MockProvider } from './providers/mock.provider';
 import { AiRouterProvider } from './providers/ai-router.provider';
 
 @Module({
-  imports: [
-    ConfigModule,
-    TypeOrmModule.forFeature([AiJob]),
-  ],
+  imports: [ConfigModule, TypeOrmModule.forFeature([AiJob])],
   controllers: [AiController],
   providers: [
     AiService,
     OllamaProvider,
     MockProvider,
-    AiRouterProvider,  // 路由器作为默认 LlmProvider 注入 AiService
+    AiRouterProvider, // 路由器作为默认 LlmProvider 注入 AiService
   ],
   exports: [AiService, TypeOrmModule, AiRouterProvider],
 })

@@ -9,7 +9,7 @@ import { Test } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { AiService } from './ai.service';
-import { AiJob, AiJobTargetType } from './entities/ai-job.entity';
+import { AiJob } from './entities/ai-job.entity';
 import { AiRouterProvider } from './providers/ai-router.provider';
 import { MockProvider } from './providers/mock.provider';
 
@@ -20,13 +20,20 @@ function makeJobRepo() {
   const genId = () => `job-${++seq}`;
   return {
     create(data: Partial<AiJob>): AiJob {
-      return { ...data, id: genId(), status: 'queued', createdAt: new Date() } as AiJob;
+      return {
+        ...data,
+        id: genId(),
+        status: 'queued',
+        createdAt: new Date(),
+      } as AiJob;
     },
     async save(job: AiJob): Promise<AiJob> {
       map.set(job.id, job);
       return job;
     },
-    async findOne(args: { where: { id: string; userId?: string } }): Promise<AiJob | null> {
+    async findOne(args: {
+      where: { id: string; userId?: string };
+    }): Promise<AiJob | null> {
       const j = map.get(args.where.id);
       if (!j) return null;
       if (args.where.userId && j.userId !== args.where.userId) return null;
@@ -35,16 +42,26 @@ function makeJobRepo() {
     async findOneBy(where: { id: string }): Promise<AiJob | null> {
       return map.get(where.id) ?? null;
     },
-    async find(args: { where: { userId: string }; order?: any; take?: number }): Promise<AiJob[]> {
-      const arr = Array.from(map.values()).filter((j) => j.userId === args.where.userId);
-      arr.sort((a, b) => (b.createdAt!.getTime() - a.createdAt!.getTime()));
+    async find(args: {
+      where: { userId: string };
+      order?: any;
+      take?: number;
+    }): Promise<AiJob[]> {
+      const arr = Array.from(map.values()).filter(
+        (j) => j.userId === args.where.userId,
+      );
+      arr.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
       return arr.slice(0, args.take ?? 20);
     },
     async update(id: string, patch: Partial<AiJob>): Promise<void> {
       const j = map.get(id);
       if (j) Object.assign(j, patch);
     },
-    manager: { async query() { return []; } },
+    manager: {
+      async query() {
+        return [];
+      },
+    },
   };
 }
 
@@ -72,7 +89,7 @@ describe('AiService', () => {
     const job = await service.submit({
       userId: 'u1',
       kind: 'event-summary',
-      targetType: 'event' as AiJobTargetType,
+      targetType: 'event',
       targetId: 'ev-1',
       promptInput: { kind: 'text', text: 'event body' },
     });
@@ -91,7 +108,7 @@ describe('AiService', () => {
     const job = await service.runNow({
       userId: 'u2',
       kind: 'memoir-summary',
-      targetType: 'memoir' as AiJobTargetType,
+      targetType: 'memoir',
       targetId: 'mem-1',
       promptInput: { kind: 'text', text: 'long memoir' },
     });
@@ -108,7 +125,7 @@ describe('AiService', () => {
     const job = await service.submit({
       userId: 'u3',
       kind: 'event-summary',
-      targetType: 'event' as AiJobTargetType,
+      targetType: 'event',
       targetId: 'ev-2',
       promptInput: { kind: 'text', text: 't' },
     });
@@ -121,7 +138,7 @@ describe('AiService', () => {
     const created = await service.submit({
       userId: 'u4',
       kind: 'image-tag',
-      targetType: 'moment' as AiJobTargetType,
+      targetType: 'moment',
       targetId: 'm-1',
       promptInput: { kind: 'media-url', url: 'http://x' },
     });
@@ -133,11 +150,13 @@ describe('AiService', () => {
     const created = await service.submit({
       userId: 'u5',
       kind: 'image-tag',
-      targetType: 'moment' as AiJobTargetType,
+      targetType: 'moment',
       targetId: 'm-2',
       promptInput: { kind: 'media-url', url: 'http://x' },
     });
-    await expect(service.getJob(created.id, 'u6')).rejects.toThrow(NotFoundException);
+    await expect(service.getJob(created.id, 'u6')).rejects.toThrow(
+      NotFoundException,
+    );
   });
 
   it('listJobs returns only the user\u2019s jobs, newest first', async () => {
@@ -145,7 +164,7 @@ describe('AiService', () => {
       await service.submit({
         userId: 'u7',
         kind: 'event-summary',
-        targetType: 'event' as AiJobTargetType,
+        targetType: 'event',
         targetId: `ev-${i}`,
         promptInput: { kind: 'text', text: 't' },
       });
@@ -153,7 +172,7 @@ describe('AiService', () => {
     await service.submit({
       userId: 'other',
       kind: 'event-summary',
-      targetType: 'event' as AiJobTargetType,
+      targetType: 'event',
       targetId: 'ev-other',
       promptInput: { kind: 'text', text: 't' },
     });

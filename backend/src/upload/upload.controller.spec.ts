@@ -7,9 +7,13 @@ import { User } from '../users/user.entity';
 
 describe('UploadController', () => {
   let controller: UploadController;
-  let uploadService: { presign: jest.Mock; complete: jest.Mock; remove: jest.Mock };
+  let uploadService: {
+    presign: jest.Mock;
+    complete: jest.Mock;
+    remove: jest.Mock;
+  };
 
-  const mockUser: Partial<User> = { id: 'user-1' } as any;
+  const mockUser: Partial<User> = { id: 'user-1' };
 
   beforeEach(async () => {
     uploadService = {
@@ -20,9 +24,7 @@ describe('UploadController', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [UploadController],
-      providers: [
-        { provide: UploadService, useValue: uploadService },
-      ],
+      providers: [{ provide: UploadService, useValue: uploadService }],
     })
       .overrideGuard(AuthGuard('jwt'))
       .useValue({ canActivate: () => true })
@@ -83,8 +85,15 @@ describe('UploadController', () => {
     });
 
     it('omits undefined meta fields', async () => {
-      uploadService.complete.mockResolvedValueOnce({ key: 'k', url: 'u', fileSize: 1, contentType: 't' });
-      await controller.complete(mockUser as User, { key: 'uploads/user-1/photo/x.jpg' });
+      uploadService.complete.mockResolvedValueOnce({
+        key: 'k',
+        url: 'u',
+        fileSize: 1,
+        contentType: 't',
+      });
+      await controller.complete(mockUser as User, {
+        key: 'uploads/user-1/photo/x.jpg',
+      });
       expect(uploadService.complete).toHaveBeenCalledWith(
         'user-1',
         'uploads/user-1/photo/x.jpg',

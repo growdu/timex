@@ -4,6 +4,7 @@ import {
   IsEnum,
   IsArray,
   IsDateString,
+  MaxLength,
 } from 'class-validator';
 import { EventStage } from '../event-stage.enum';
 
@@ -16,6 +17,7 @@ export class CreateEventDto {
 
   @IsString()
   @IsOptional()
+  @MaxLength(500)
   location?: string;
 
   @IsString()
@@ -28,14 +30,17 @@ export class CreateEventDto {
 
   @IsString()
   @IsOptional()
+  @MaxLength(500)
   summary?: string;
 
   @IsString()
   @IsOptional()
+  @MaxLength(10000)
   longText?: string;
 
   @IsString()
   @IsOptional()
+  @MaxLength(500)
   coverUrl?: string;
 
   @IsArray()
@@ -46,6 +51,7 @@ export class CreateEventDto {
 export class UpdateEventDto {
   @IsString()
   @IsOptional()
+  @MaxLength(500)
   title?: string;
 
   @IsDateString()
@@ -54,6 +60,7 @@ export class UpdateEventDto {
 
   @IsString()
   @IsOptional()
+  @MaxLength(500)
   location?: string;
 
   @IsString()
@@ -66,14 +73,17 @@ export class UpdateEventDto {
 
   @IsString()
   @IsOptional()
+  @MaxLength(500)
   summary?: string;
 
   @IsString()
   @IsOptional()
+  @MaxLength(10000)
   longText?: string;
 
   @IsString()
   @IsOptional()
+  @MaxLength(500)
   coverUrl?: string;
 
   @IsArray()

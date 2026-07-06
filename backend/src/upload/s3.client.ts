@@ -1,5 +1,10 @@
-import { S3Client, HeadBucketCommand, CreateBucketCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  HeadBucketCommand,
+  CreateBucketCommand,
+} from '@aws-sdk/client-s3';
 import { s3Config } from './upload.config';
+import { AwsSdkError } from '../common/types/aws-error';
 
 /** DI token for injecting the S3 client into other modules */
 export const S3_CLIENT = 'S3_CLIENT';
@@ -39,18 +44,18 @@ export async function ensureBucket(): Promise<void> {
   const client = getS3Client();
   try {
     await client.send(new HeadBucketCommand({ Bucket: s3Config.bucket }));
-  } catch (err: any) {
+  } catch (err) {
+    const awsErr = err as AwsSdkError;
     // 404 / NoSuchBucket → 创建
     if (
-      err?.$metadata?.httpStatusCode === 404 ||
-      err?.name === 'NotFound' ||
-      err?.name === 'NoSuchBucket'
+      awsErr?.$metadata?.httpStatusCode === 404 ||
+      awsErr?.name === 'NotFound' ||
+      awsErr?.name === 'NoSuchBucket'
     ) {
       await client.send(new CreateBucketCommand({ Bucket: s3Config.bucket }));
     } else {
       // 其它错误（网络/权限）记录但不抛
-      // eslint-disable-next-line no-console
-      console.warn('[upload] ensureBucket: head failed', err?.name || err);
+      console.warn('[upload] ensureBucket: head failed', awsErr?.name || err);
     }
   }
 }

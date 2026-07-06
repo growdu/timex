@@ -1,6 +1,7 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
 import { S3Client, HeadBucketCommand } from '@aws-sdk/client-s3';
 import { s3Config } from './upload/upload.config';
+import { AwsSdkError } from './common/types/aws-error';
 import { S3_CLIENT } from './upload/s3.client';
 
 export interface ComponentStatus {
@@ -33,7 +34,7 @@ export class AppService {
 
   async getHealth(): Promise<HealthReport> {
     const components = {
-      api: await this.checkApi(),
+      api: this.checkApi(),
       s3: await this.checkS3(),
     };
 
@@ -49,7 +50,7 @@ export class AppService {
     };
   }
 
-  private async checkApi(): Promise<ComponentStatus> {
+  private checkApi(): ComponentStatus {
     // API 自身可达即 OK
     return { status: 'ok', latencyMs: 0 };
   }
@@ -60,11 +61,14 @@ export class AppService {
     }
     const start = Date.now();
     try {
-      await this.s3Client.send(new HeadBucketCommand({ Bucket: s3Config.bucket }));
+      await this.s3Client.send(
+        new HeadBucketCommand({ Bucket: s3Config.bucket }),
+      );
       return { status: 'ok', latencyMs: Date.now() - start };
-    } catch (err: any) {
+    } catch (err) {
+      const awsErr = err as AwsSdkError;
       // 404 / NoSuchBucket 也算"配置可达"——但要分清楚
-      const code = err?.$metadata?.httpStatusCode;
+      const code = awsErr?.$metadata?.httpStatusCode;
       if (code === 404) {
         // bucket 不存在但 endpoint 可达 → degraded
         return {
@@ -76,7 +80,7 @@ export class AppService {
       return {
         status: 'error',
         latencyMs: Date.now() - start,
-        error: err?.message ?? 'unknown',
+        error: awsErr?.message ?? 'unknown',
       };
     }
   }
