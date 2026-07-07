@@ -1,5 +1,33 @@
 # 变更日志
 
+## [Unreleased] — 2026-07-07（部署配置修复 — compose 环境变量 + 密钥外置）
+
+### 修复（关键 — 此前阻塞生产部署）
+- **`docker-compose.yml` 环境变量名错配**：backend 服务设 `DB_HOST/DB_PORT/DB_USERNAME/DB_PASSWORD/DB_DATABASE`，
+  但应用实际读取 `DATABASE_HOST/...` → `NODE_ENV=production` 下 `validateProductionConfig()` 因 `DATABASE_PASSWORD`
+  为空直接 FATAL，后端永远起不来。统一改为 `DATABASE_*`。
+- **硬编码开发密钥**：`JWT_SECRET` / `S3_SECRET_KEY` / `POSTGRES_PASSWORD` / `MINIO_ROOT_PASSWORD` 明文写死在
+  compose（且 `JWT_SECRET` 已进公开 git 仓库）。全部外置为 `${VAR:-默认值}`，从根目录 `.env` 读取。
+- **`NODE_ENV` 默认改 development**：compose 默认可直接 `docker compose up` 起本地全栈；生产在 `.env` 设
+  `NODE_ENV=production` 触发应用密钥校验（fail-fast）。
+- postgres / minio 凭据与后端共用同一组变量（`DATABASE_*` / `S3_*`），改一处全栈同步。
+- 移除未使用的 `FRONTEND_URL`，补上应用实际读取的 `HOST` / `JWT_REFRESH_EXPIRES_IN` / `CORS_ORIGINS`。
+
+### 安全加固
+- `validateProductionConfig()`：`DATABASE_PASSWORD` 拒绝名单新增 `timex_dev_password`（compose / .env.example 的
+  开发默认值），与 JWT/S3 默认值拒绝策略对齐，避免误用开发密钥跑生产。
+- 新增 `backend/src/config/index.spec.ts`（9 tests）覆盖 `validateProductionConfig` 全部分支。
+
+### 文档 / 模板
+- 新增 `.env.example`（根目录，compose 全栈）与 `backend/.env.example`（本地 `start:dev`），对齐应用实际读取的变量名。
+- `.gitignore`：加 `!.env.example` 例外（此前 `.env.*` 规则误伤，导致 changelog 声称的 `.env.example` 从未入库）。
+- `docs/deployment.md`：生产检查清单更新 `DATABASE_PASSWORD` 拒绝值 + 新增 compose 密钥外置说明。
+
+### 校验
+- 后端 tsc 0 错；jest **220 tests** 全绿（+9 config spec）；compose 22 个 backend env 变量经脚本核对全部被应用
+  读取、无 `DB_*` 残留、`${VAR}` 全部见于 `.env.example`。
+
+
 ## [Unreleased] — 2026-07-07（前端组件测试 + lint 加固）
 
 ### 新增（测试）

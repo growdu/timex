@@ -140,12 +140,13 @@ docker run -p 3000:3000 --env-file .env timex-backend:dev
 ### 环境变量（必须）
 - [ ] `NODE_ENV=production` — 触发配置校验 + 关闭 SQL 日志
 - [ ] `JWT_SECRET` — **≥32 字符**，非默认值（启动时自动校验，不满足直接退出）
-- [ ] `DATABASE_PASSWORD` — 非 `postgres` 默认值
+- [ ] `DATABASE_PASSWORD` — 非 `postgres` / `timex_dev_password` 默认值（启动时自动校验）
 - [ ] `S3_SECRET_KEY` — 非 `minioadmin` 默认值
 - [ ] `CORS_ORIGINS` — 生产域名列表，逗号分隔（如 `https://growdu.github.io,https://timex.example.com`）
 - [ ] `DATABASE_HOST` / `DATABASE_PORT` / `DATABASE_USER` / `DATABASE_NAME`
 - [ ] `REDIS_HOST` / `REDIS_PORT`（可选 `REDIS_PASSWORD`）
 - [ ] `S3_ENDPOINT` / `S3_ACCESS_KEY` / `S3_BUCKET` / `S3_PUBLIC_URL`
+- [ ] 参考 `.env.example`（根目录，compose 全栈）与 `backend/.env.example`（本地开发）模板
 
 ### 安全
 - [ ] JWT secret 签发/验证一致（统一使用 `JWT_SECRET` 环境变量）
@@ -167,6 +168,16 @@ docker run -p 3000:3000 --env-file .env timex-backend:dev
 - [ ] HTTP 请求日志（method + path + status + 耗时）
 - [ ] `/health` 端点监控（API + S3 可达性）
 - [ ] 未捕获异常日志（AllExceptionsFilter 自动记录 5xx）
+
+### Docker Compose 全栈
+
+`docker-compose.yml` 的密钥已外置为 `${VAR:-默认值}` 形式，从项目根的 `.env` 读取（`cp .env.example .env`）：
+
+- **本地全栈**：默认 `NODE_ENV=development`，直接 `docker compose up` 即可起 postgres + redis + minio + backend + frontend。
+- **生产**：在 `.env` 设 `NODE_ENV=production` 并提供强密钥 —— 应用启动时 `validateProductionConfig()` 自动校验
+  `JWT_SECRET`(≥32 字符且非默认) / `DATABASE_PASSWORD`(非 `postgres`/`timex_dev_password`) / `S3_SECRET_KEY`(非 `minioadmin`)，
+  不满足直接 FATAL 退出。
+- postgres / minio 的凭据与后端共用同一组变量（`DATABASE_*` / `S3_*`），改一处即全栈同步。
 
 ### Docker 部署命令
 

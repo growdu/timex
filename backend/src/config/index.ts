@@ -22,7 +22,8 @@ export function validateProductionConfig(): void {
   }
 
   const dbPass = process.env.DATABASE_PASSWORD;
-  if (!dbPass || dbPass === 'postgres') {
+  // 拒绝已知开发默认值：'postgres'（config 默认）与 'timex_dev_password'（compose / .env.example 默认）
+  if (!dbPass || dbPass === 'postgres' || dbPass === 'timex_dev_password') {
     throw new Error(
       'FATAL: DATABASE_PASSWORD must be set to a non-default value in production.',
     );
