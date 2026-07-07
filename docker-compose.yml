@@ -43,6 +43,7 @@ services:
       - NODE_ENV=${NODE_ENV:-development}
       - HOST=0.0.0.0
       - PORT=3000
+      - RUN_MIGRATIONS_ON_BOOT=${RUN_MIGRATIONS_ON_BOOT:-true}
       - DATABASE_HOST=postgres
       - DATABASE_PORT=5432
       - DATABASE_USER=${DATABASE_USER:-timex}

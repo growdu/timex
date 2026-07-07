@@ -164,6 +164,17 @@ docker run -p 3000:3000 --env-file .env timex-backend:dev
 - [ ] 数据库定期备份策略
 - [ ] Redis 持久化配置（如需限流跨重启保留）
 
+### 数据库迁移
+
+初始 schema 由 `backend/scripts/init.sql`（postgres `docker-entrypoint-initdb.d`）在首次建库时创建；
+**增量 schema 变更**通过 `backend/scripts/migrations/*.sql` 迁移：
+
+- **自动（推荐，单实例）**：compose 默认 `RUN_MIGRATIONS_ON_BOOT=true`，后端启动时自动应用未记录的迁移。
+- **手动（多实例 / 预演）**：`cd backend && npm run migrate`（一次性 job，幂等）。
+- 迁移记录表 `schema_migrations`（filename 主键），已应用的迁移自动跳过。
+- 多实例部署：用 `npm run migrate` 作为 pre-deploy 一次性 job，并设 `RUN_MIGRATIONS_ON_BOOT=false` 避免并发竞争。
+- 新增迁移：在 `backend/scripts/migrations/` 放一个 `YYYY_MM_DD_name.sql`（建议用 `IF NOT EXISTS` 保持幂等）。
+
 ### 监控
 - [ ] HTTP 请求日志（method + path + status + 耗时）
 - [ ] `/health` 端点监控（API + S3 可达性）

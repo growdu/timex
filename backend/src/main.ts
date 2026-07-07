@@ -3,6 +3,8 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { DataSource } from 'typeorm';
+import { runMigrations } from './migrations/runner';
 import { validateProductionConfig } from './config';
 
 async function bootstrap() {
@@ -13,6 +15,15 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     bufferLogs: true,
   });
+
+  // 可选：启动时自动应用 SQL 迁移（scripts/migrations/*.sql）
+  // 单实例便捷开关；多实例部署建议用 `npm run migrate` 作为一次性 pre-deploy job 并关闭此项
+  if (process.env.RUN_MIGRATIONS_ON_BOOT === 'true') {
+    const result = await runMigrations(app.get(DataSource));
+    logger.log(
+      `Migrations applied: ${result.applied.length}, skipped: ${result.skipped.length}`,
+    );
+  }
 
   // CORS — 通过 CORS_ORIGINS 环境变量配置允许的源
   const corsOriginsEnv = process.env.CORS_ORIGINS || '';

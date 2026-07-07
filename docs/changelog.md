@@ -1,5 +1,24 @@
 # 变更日志
 
+## [Unreleased] — 2026-07-07（DB 迁移机制）
+
+### 新增
+- **SQL 迁移运行器** `backend/src/migrations/runner.ts`：读取 `scripts/migrations/*.sql`（按文件名排序），
+  用 `schema_migrations` 表跟踪已应用记录，每个迁移独立事务、失败回滚并抛出。保留项目既有「丢 .sql 文件」工作流。
+- `backend/src/migrate.ts` 独立入口：`npm run migrate`（编译后）/ `npm run migrate:dev`（ts-node）。
+- `main.ts` 启动钩子：`RUN_MIGRATIONS_ON_BOOT=true` 时在 `app.listen` 前自动应用迁移（compose 默认开启，
+  修复「fresh compose → /api/ai/* 500（ai_jobs 表缺失）」）。
+- `backend/src/migrations/runner.spec.ts`：6 tests 覆盖建表 / 应用 / 跳过 / 回滚 / 目录读取。
+
+### 改动
+- `backend/Dockerfile`：运行时镜像拷入 `scripts/migrations`（供启动钩子 / `node dist/migrate.js` 读取）。
+- `docker-compose.yml` + `.env.example`：新增 `RUN_MIGRATIONS_ON_BOOT`（默认 true）/ `MIGRATIONS_DIR`。
+
+### 注意
+- 多实例部署：建议用 `npm run migrate` 作为一次性 pre-deploy job 并设 `RUN_MIGRATIONS_ON_BOOT=false`，避免并发迁移竞争。
+- 初始 schema 仍由 `init.sql`（postgres docker-entrypoint）创建；迁移负责增量演进（如 ai_jobs）。
+
+
 ## [Unreleased] — 2026-07-07（部署配置修复 — compose 环境变量 + 密钥外置）
 
 ### 修复（关键 — 此前阻塞生产部署）

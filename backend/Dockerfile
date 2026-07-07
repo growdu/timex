@@ -24,6 +24,8 @@ COPY package*.json ./
 RUN npm ci --only=production && npm cache clean --force
 
 COPY --from=builder /app/dist ./dist
+# SQL 迁移文件（供 RUN_MIGRATIONS_ON_BOOT / `node dist/migrate.js` 读取）
+COPY --from=builder /app/scripts/migrations ./scripts/migrations
 
 # 健康检查（间隔 30s，超时 3s，启动等待 10s）
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s \
