@@ -65,6 +65,26 @@ docker run -p 3000:3000 --env-file .env timex-backend:dev
 
 环境变量：见 [setup.md](./setup.md#后端-backendenv)。生产环境务必更换 `JWT_SECRET`。
 
+## TLS / HTTPS（Caddy 生产覆盖）
+
+基础 `docker-compose.yml` 走 HTTP（本地全栈用）。生产 HTTPS 通过 `docker-compose.prod.yml`
++ `Caddyfile` 覆盖：Caddy 自动申请并续期 Let's Encrypt 证书，反代前端（SPA）与后端（API/health），
+并将前端 / 后端改为仅容器内可达（`!reset` 清空宿主机端口映射）。
+
+```bash
+# 生产一键启动（需 Docker Compose v2.24+）
+DOMAIN=timex.example.com LETSENCRYPT_EMAIL=you@example.com \
+  docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
+- Caddy 监听 80（HTTP→HTTPS 跳转）+ 443（HTTPS）。
+- `/api/*`、`/health` → `backend:3000`；其余 → `frontend:80`（nginx SPA）。
+- 未设 `DOMAIN` 时 compose 直接报错（`${DOMAIN:?}` fail-fast）；本地测试可用 `DOMAIN=localhost`
+  （Caddy 用 internal CA 自签证书，浏览器会警告）。
+- 证书与配置持久化在 `caddy_data` / `caddy_config` 卷。
+
+> 也可在云平台（Railway/Render/Fly 等）由托管层终止 TLS，则无需本覆盖。
+
 ## CI/CD 流程图
 
 ```

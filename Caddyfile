@@ -1,0 +1,23 @@
+# Caddy 生产反代 — 自动 HTTPS（Let's Encrypt）
+# 用法：DOMAIN=timex.example.com LETSENCRYPT_EMAIL=you@example.com \
+#      docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# 本地不设 DOMAIN 时 Caddy 用 internal CA 自签证书（浏览器警告，仅供本地测试）。
+
+{
+	email {$LETSENCRYPT_EMAIL:}
+}
+
+{$DOMAIN:localhost} {
+	encode gzip zstd
+
+	# API → 后端
+	@api path /api/*
+	reverse_proxy @api backend:3000
+
+	# 健康检查 → 后端
+	@health path /health
+	reverse_proxy @health backend:3000
+
+	# 其余 → 前端 SPA（nginx）
+	reverse_proxy frontend:80
+}

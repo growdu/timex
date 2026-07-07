@@ -7,41 +7,19 @@ COPY package*.json ./
 RUN npm ci
 
 COPY . .
+
+# 前端 API 基址（构建时注入 import.meta.env.VITE_API_URL）：
+# - 单机 / compose 全栈：相对 /api（经 nginx 反代到 backend）
+# - 独立 API 域名：https://api.example.com/api
+ARG VITE_API_URL=/api
+ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 
 # ---- Runtime ----
 FROM nginx:alpine
 
-# nginx SPA 配置：路由 fallback + gzip + 静态资源缓存
-RUN cat > /etc/nginx/conf.d/default.conf << 'NGINX'
-server {
-    listen 80;
-    server_name _;
-    root /usr/share/nginx/html;
-    index index.html;
-
-    # gzip 压缩
-    gzip on;
-    gzip_types text/css application/javascript application/json image/svg+xml;
-    gzip_min_length 1024;
-
-    # SPA 路由 fallback
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-
-    # 静态资源长缓存（带 hash 的文件名）
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)$ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-    }
-
-    # index.html 不缓存（确保用户拿到最新版本）
-    location = /index.html {
-        add_header Cache-Control "no-cache, no-store, must-revalidate";
-    }
-}
-NGINX
+# nginx 配置：SPA fallback + gzip + 静态缓存 + /api 反代（与 frontend/nginx.conf 同源）
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 COPY --from=builder /app/dist /usr/share/nginx/html
 # SPA 404 fallback

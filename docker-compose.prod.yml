@@ -1,0 +1,40 @@
+# 生产部署覆盖：Caddy 自动 HTTPS 反代 + 前端/后端内网化
+#
+# 用法：
+#   DOMAIN=timex.example.com LETSENCRYPT_EMAIL=you@example.com \
+#     docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# 要求 Docker Compose v2.24+（支持 !reset 清空继承的端口映射）。
+# 若你的 compose 版本较旧不支持 !reset，请手动删除本文件 frontend/backend 的 ports 行，
+# 并在 docker-compose.yml 中把 frontend 的 "80:80"、backend 的 "3000:3000" 注释掉。
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: timex-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      - DOMAIN=${DOMAIN:?生产必须设置 DOMAIN，例如 timex.example.com}
+      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL:-}
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - timex-network
+
+  # 生产：前端 / 后端不直接暴露宿主机，统一由 Caddy 反代
+  frontend:
+    ports: !reset []
+
+  backend:
+    ports: !reset []
+
+volumes:
+  caddy_data:
+  caddy_config:

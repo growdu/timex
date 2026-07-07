@@ -1,5 +1,28 @@
 # 变更日志
 
+## [Unreleased] — 2026-07-07（生产路由与 TLS — nginx /api 统一 + Caddy 自动 HTTPS）
+
+### 修复（阻塞 #4：nginx /api 反代分歧）
+- **Dockerfile 与 nginx.conf 配置分歧**：`frontend/Dockerfile` 此前内联了一份**没有** `/api` 反代的
+  nginx 配置，而 compose 用 bind-mount 覆盖成 `frontend/nginx.conf`（有 `/api`+`/health` 反代）。
+  standalone `docker build/run` 的前端因此无法代理 API。
+- 改为单一来源：合并出完整 `frontend/nginx.conf`（SPA fallback + gzip + 静态缓存 + index.html 不缓存
+  + `/api`→backend + `/health`→backend），`Dockerfile` 改为 `COPY nginx.conf`。
+- 前端构建注入 `VITE_API_URL=/api`（相对路径，经 nginx 反代），消除「浏览器直连 localhost:3000」的
+  远程访问失效问题；compose 前端服务加 build args、移除 nginx.conf bind-mount（镜像自包含）。
+
+### 新增（阻塞 #5：TLS/HTTPS）
+- `Caddyfile` + `docker-compose.prod.yml`：生产 HTTPS 覆盖。Caddy 自动申请/续期 Let's Encrypt 证书，
+  反代前端 SPA 与后端 API/health，并将前端/后端内网化（`!reset` 清空宿主机端口，需 Compose v2.24+）。
+- 用法：`DOMAIN=... LETSENCRYPT_EMAIL=... docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d`。
+- `.env.example` 补 `DOMAIN` / `LETSENCRYPT_EMAIL`（生产必填，`${DOMAIN:?}` fail-fast）。
+- 基础 compose 不变 → 本地全栈仍走 HTTP，零破坏。
+
+### 校验
+- 前端 `VITE_API_URL=/api npm run build` 通过（`/api` 已注入 bundle）；lint 0、204 tests 全过。
+- 基础 compose YAML 解析通过；Caddyfile/prod override 为配置文件（无运行时测试，语法按 Caddy/compose 规范）。
+
+
 ## [Unreleased] — 2026-07-07（DB 迁移机制）
 
 ### 新增
