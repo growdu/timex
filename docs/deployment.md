@@ -85,6 +85,34 @@ DOMAIN=timex.example.com LETSENCRYPT_EMAIL=you@example.com \
 
 > 也可在云平台（Railway/Render/Fly 等）由托管层终止 TLS，则无需本覆盖。
 
+## 持续交付（GHCR 镜像）
+
+`.github/workflows/docker-publish.yml` 在 push 到 `main` 或打 `v*` tag 时，自动构建并推送
+backend / frontend 镜像到 GitHub Container Registry：
+
+- 镜像：`ghcr.io/<owner>/timex-backend`、`ghcr.io/<owner>/timex-frontend`
+- 标签：`latest`（main）、`sha-xxxxxx`（每次提交）、`v1.2.3` / `1.2`（版本 tag）
+- 前端镜像默认 `VITE_API_URL=/api`（经前向反代 Caddy/nginx）；独立 API 域名请自建镜像
+
+拉取预构建镜像部署（无需本地构建源码）：
+
+```bash
+docker pull ghcr.io/<owner>/timex-backend:latest
+docker pull ghcr.io/<owner>/timex-frontend:latest
+
+docker run -d --name timex-backend -p 3000:3000 --env-file .env.production \
+  ghcr.io/<owner>/timex-backend:latest
+docker run -d --name timex-frontend -p 80:80 \
+  ghcr.io/<owner>/timex-frontend:latest
+```
+
+> 想用预构建镜像跑 compose：在 `docker-compose.prod.yml` 里给 `backend`/`frontend` 加
+> `image: ghcr.io/<owner>/timex-<target>:latest`，再 `docker compose -f docker-compose.yml
+> -f docker-compose.prod.yml pull && up -d`。
+>
+> 仓库 Settings → Actions → General → Workflow permissions 需选 **Read and write permissions**
+> 才能推送 Packages；首次发布后到 Package 设置里调整可见性。
+
 ## CI/CD 流程图
 
 ```

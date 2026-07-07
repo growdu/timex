@@ -1,5 +1,19 @@
 # 变更日志
 
+## [Unreleased] — 2026-07-07（生产 CD — GHCR 镜像自动发布）
+
+### 新增（阻塞 #6：生产 CD 流水线）
+- `.github/workflows/docker-publish.yml`：push 到 `main` 或打 `v*` tag 时，自动构建并推送
+  backend / frontend 镜像到 GitHub Container Registry（`ghcr.io/<owner>/timex-{backend,frontend}`）。
+- 标签策略：`latest`（main）、`sha-xxxxxx`（提交）、`v1.2.3` / `1.2`（semver tag）。
+- 矩阵构建 backend + frontend；GHA 缓存加速；前端镜像默认 `VITE_API_URL=/api`。
+- `docs/deployment.md`：新增「持续交付（GHCR 镜像）」章节 + 拉取部署示例 + compose 集成提示。
+
+### 备注
+- 部署目标主机（Railway/Render/Fly/自建）拉取镜像后配合 `.env`（生产密钥）+ Caddy prod 覆盖即可上线。
+- 主分支应由 CI（ci.yml）门禁保护后再触发镜像发布。
+
+
 ## [Unreleased] — 2026-07-07（生产路由与 TLS — nginx /api 统一 + Caddy 自动 HTTPS）
 
 ### 修复（阻塞 #4：nginx /api 反代分歧）
