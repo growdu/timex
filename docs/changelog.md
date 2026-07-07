@@ -1,5 +1,31 @@
 # 变更日志
 
+## [Unreleased] — 2026-07-07（前端组件测试 + lint 加固）
+
+### 新增（测试）
+- **3 个前端组件测试套件**（29 tests）：
+  - `FabStack.test.jsx`（7 tests）— FAB 浮窗 + 心情小部件 + 快捷入口
+  - `LineCard.test.jsx`（11 tests）— 6 条线卡片渲染 + 计数 + 渐变 header + 关联 chip
+  - `RichTimeline.test.jsx`（11 tests）— 时间线卡片 + 空态 + 阶段色 + 倒序排序
+- 前端测试总数达 **204 passing**（13 文件）；组件覆盖 FabStack / LineCard **100% 行**、RichTimeline **97.22% 行**
+
+### 改动（lint / 类型安全）
+- `eslint.config.js`：启用 `react/jsx-uses-vars`，消除 JSX 引用变量被误报 `no-unused-vars`
+- 清理未使用 import / prop / 变量：`App.jsx`（`useEffect`/`useState`/`useAuthStore`）、
+  `SpaceMap`（`useRef`）、`UploadModal`（`eventsApi`/`userId`）、`MemoirPage`（`api`）、
+  `RichTimeline`（`title`）、`SpacePage`（`useState`）、`TimelinePage`（`renderPeople`/`featuredPeople`/`padY`）、
+  `LicensePage`（`user`/`clearLicense`/`err`→`_err`）、`useAiJob`（注释掉的 eslint-disable）、
+  `mocks/handlers/auth.js`（未用 `request`）
+- `App.jsx` / `LinesPage` / `MemoirPage`：派生数组改用 `useMemo` 记忆化，避免每渲染重建引用
+- `all-exceptions.filter.spec.ts`：纯格式化（数组换行），无行为变更
+- 前端 `eslint --max-warnings 0` 全绿，`vite build` 通过（303 模块，gz ≈ 167 KB）
+
+### 文档
+- `docs/testing.md`：刷新快照（2026-07-07）— 后端 211 tests / 69.71% 行、前端 204 tests；
+  补组件覆盖表项 + 低覆盖模块说明（新增商用加固 infra 模块）
+- 删除遗留 `eslint.config.js.bak` 备份
+
+
 ## [Unreleased] — 2026-07-05（商用就绪加固）
 
 ### 修复（安全 — 关键）

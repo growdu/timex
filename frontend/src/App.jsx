@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import AppLayout from "./components/AppLayout.jsx";
@@ -18,7 +18,7 @@ import { eventsApi } from "./api/events";
 import { peopleApi } from "./api/people";
 import { placesApi } from "./api/places";
 import { memoirsApi } from "./api/memoirs";
-import { useAuthStore, useUIStore } from "./store";
+import { useUIStore } from "./store";
 import { createApiAdapter } from "./data/apiAdapter.js";
 
 // TanStack Query hooks
@@ -120,10 +120,10 @@ function AppContent({ user, onLogin }) {
   const { data: placesData } = usePlaces();
   const { data: memoirsData } = useMemoirs();
 
-  const events = eventsData?.events || [];
-  const people = peopleData?.people || [];
-  const places = placesData?.places || [];
-  const memoirs = memoirsData?.memoirs || [];
+  const events = useMemo(() => eventsData?.events || [], [eventsData]);
+  const people = useMemo(() => peopleData?.people || [], [peopleData]);
+  const places = useMemo(() => placesData?.places || [], [placesData]);
+  const memoirs = useMemo(() => memoirsData?.memoirs || [], [memoirsData]);
 
   // Create API adapter with real data
   const api = useMemo(

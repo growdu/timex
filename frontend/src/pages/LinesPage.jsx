@@ -16,9 +16,9 @@ export default function LinesPage({
   const navigate = useNavigate();
   const setLine = useUIStore((s) => s.setUiState);
 
-  const allEvents = data?.events || [];
-  const allPeople = data?.people || [];
-  const allPlaces = data?.places || [];
+  const allEvents = useMemo(() => data?.events || [], [data]);
+  const allPeople = useMemo(() => data?.people || [], [data]);
+  const allPlaces = useMemo(() => data?.places || [], [data]);
 
   const allLines = useMemo(() => {
     if (!api) {

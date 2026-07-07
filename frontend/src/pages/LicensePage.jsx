@@ -2,8 +2,8 @@ import { useState } from "react";
 import { licenseApi } from "../api/license";
 import { useLicenseStore } from "../store";
 
-export default function LicensePage({ user }) {
-  const { license, devices, isInTrial, trialExpiresAt, setLicense, clearLicense } = useLicenseStore();
+export default function LicensePage() {
+  const { license, devices, isInTrial, trialExpiresAt, setLicense } = useLicenseStore();
   const [licenseKey, setLicenseKey] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -36,7 +36,7 @@ export default function LicensePage({ user }) {
     try {
       await licenseApi.deactivateDevice(deviceId);
       window.location.reload();
-    } catch (err) {
+    } catch (_err) {
       setError("解绑设备失败");
     }
   };
@@ -46,7 +46,7 @@ export default function LicensePage({ user }) {
       const status = await licenseApi.getStatus();
       setLicense(status.activeLicense, status.devices, status.isInTrial, status.trialExpiresAt);
       setSuccess("状态已更新");
-    } catch (err) {
+    } catch (_err) {
       setError("获取状态失败");
     }
   };

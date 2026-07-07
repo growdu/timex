@@ -97,7 +97,6 @@ export function useAiJob(options = {}) {
               }
             } catch (e) {
               // 单次轮询失败不中断，继续
-              // eslint-disable-next-line no-console
               console.warn('ai poll failed', e);
             }
           }, pollIntervalMs);

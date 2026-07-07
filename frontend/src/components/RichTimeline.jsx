@@ -26,7 +26,7 @@ function formatMonthDay(date) {
   return s;
 }
 
-export default function RichTimeline({ events = [], api, title = "时间线" }) {
+export default function RichTimeline({ events = [], api }) {
   const sorted = [...events].sort((a, b) => new Date(b.date) - new Date(a.date));
 
   if (sorted.length === 0) {

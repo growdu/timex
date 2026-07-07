@@ -10,13 +10,12 @@ export default function MemoirPage({
   filteredEvents,
   setUiState,
   logout,
-  api,
   data,
   selectedEvent,
   selectedPlace,
   selectedPerson,
 }) {
-  const memoirs = (data && data.memoirs) || [];
+  const memoirs = useMemo(() => (data && data.memoirs) || [], [data]);
   const queryClient = useQueryClient();
 
   const allChapters = useMemo(() => {

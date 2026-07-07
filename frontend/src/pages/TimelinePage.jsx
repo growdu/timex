@@ -4,10 +4,6 @@ import RichTimeline from "../components/RichTimeline.jsx";
 import LineCard from "../components/LineCard.jsx";
 import FabStack from "../components/FabStack.jsx";
 
-function renderPeople(people) {
-  if (!Array.isArray(people)) return null;
-  return people.map((name, idx) => <span key={`${name}-${idx}`} className="tag">{name}</span>);
-}
 
 const stageToneMap = {
   student: "navy",
@@ -63,7 +59,7 @@ function VisualTimeline({ events, api, onSelect }) {
   const W = 1000;
   const H = 130;
   const padX = 40;
-  const padY = 30;
+  const _padY = 30;
   const usableW = W - padX * 2;
   const baseY = H / 2 + 6;
 
@@ -188,7 +184,6 @@ export default function TimelinePage({
 
   // Featured event for right rail
   const featuredEvent = selectedEvent || allEvents[0] || null;
-  const featuredPeople = featuredEvent ? api.formatPeople(api.getEventPeopleIds(featuredEvent)) : [];
   const featuredPlace = featuredEvent
     ? (selectedPlace && selectedPlace.id === featuredEvent.placeId
         ? selectedPlace

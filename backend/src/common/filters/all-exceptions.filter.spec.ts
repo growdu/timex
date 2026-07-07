@@ -43,7 +43,10 @@ describe('AllExceptionsFilter', () => {
 
   it('handles BadRequestException with array messages', () => {
     const exception = new HttpException(
-      { message: ['field1 is required', 'field2 must be a string'], error: 'Bad Request' },
+      {
+        message: ['field1 is required', 'field2 must be a string'],
+        error: 'Bad Request',
+      },
       HttpStatus.BAD_REQUEST,
     );
     filter.catch(exception, host);
@@ -51,7 +54,10 @@ describe('AllExceptionsFilter', () => {
     expect(mockResponse.status).toHaveBeenCalledWith(400);
     const body = (mockResponse.json as jest.Mock).mock.calls[0][0];
     expect(body.statusCode).toBe(400);
-    expect(body.message).toEqual(['field1 is required', 'field2 must be a string']);
+    expect(body.message).toEqual([
+      'field1 is required',
+      'field2 must be a string',
+    ]);
     expect(body.error).toBe('Bad Request');
   });
 

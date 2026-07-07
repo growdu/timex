@@ -34,6 +34,8 @@ export default [
       // React 17+ 不强制 import React
       'react/react-in-jsx-scope': 'off',
       'react/prop-types': 'off',
+      // JSX 中引用的变量标记为已使用（修复 no-unused-vars 误报）
+      'react/jsx-uses-vars': 'error',
       // Hooks 规则
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',

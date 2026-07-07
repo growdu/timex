@@ -1,7 +1,6 @@
 import { useState, useRef } from "react";
 import { uploadApi } from "../api/upload";
 import { momentsApi } from "../api/moments";
-import { eventsApi } from "../api/events";
 
 const KIND_FROM_TYPE = {
   photo: "photo",
@@ -16,7 +15,7 @@ const MOMENT_TYPE_FROM_KIND = {
   text: "text",
 };
 
-export default function UploadModal({ onClose, onSuccess, userId }) {
+export default function UploadModal({ onClose, onSuccess }) {
   const [uploadType, setUploadType] = useState("photo");
   const [files, setFiles] = useState([]);
   const [textContent, setTextContent] = useState("");

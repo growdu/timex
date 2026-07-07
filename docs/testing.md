@@ -1,29 +1,31 @@
 # 测试覆盖报告
 
-> 后端 156 tests / 80% 行覆盖，前端 152 tests / 核心派生层 100% 覆盖
+> 后端 211 tests / 69.71% 行覆盖，前端 204 tests / 核心派生层 ~100% 覆盖
 
-## 当前快照（2026-06-30）
+## 当前快照（2026-07-07）
 
 ### 后端
 
 | 指标 | 值 |
 |---|---|
-| 测试总数 | **156 passing** |
-| 文件数（spec） | **15** |
-| 语句覆盖 | **77.17%** |
-| 分支覆盖 | **72.62%** |
-| 函数覆盖 | **64.77%** |
-| 行覆盖 | **80.00%** |
+| 测试总数 | **211 passing** |
+| 文件数（spec） | **22** |
+| 语句覆盖 | **68.14%** |
+| 分支覆盖 | **63.26%** |
+| 函数覆盖 | **61.04%** |
+| 行覆盖 | **69.71%** |
 | tsc 错误 | **0** |
 
 ### 前端
 
 | 指标 | 值 |
 |---|---|
-| 测试总数 | **152 passing** |
+| 测试总数 | **204 passing** |
+| 文件数 | **13** |
 | apiAdapter / lines / lineMatchers | **100%** |
 | 12 个 useData hooks | **~100%** |
-| Pages / components | **待补**（下一轮） |
+| components（FabStack / LineCard / RichTimeline） | **97–100%** |
+| Pages（Login / Register / License） | **81–96%** |
 
 ### 100% 覆盖模块（核心）
 
@@ -44,6 +46,13 @@
 | `apiAdapter.js` | 前端 | 100% |
 | `lines.js` | 前端 | 100% |
 | `lineMatchers.js` | 前端 | 100% |
+| `auth.service` | 后端 | 100% |
+| `upload.controller` | 后端 | 100% |
+| `upload.service` | 后端 | 100% |
+| `store/index.js` | 前端 | 100% |
+| `FabStack.jsx` | 前端 | 100% |
+| `LineCard.jsx` | 前端 | 100% |
+| `RichTimeline.jsx` | 前端 | 97.22% |
 
 ## 运行测试
 
@@ -252,7 +261,11 @@ global.fetch = vi.fn(() =>
 
 | 模块 | 覆盖 | 原因 |
 |---|---|---|
-| `app.service` | 50% | 仅 `getHello()`，无害 |
+| `ai.controller` | 0% | AI 模块集成层，待 Mock provider 测试补 |
+| `jwt.strategy` | 0% | 守卫集成层，E2E 覆盖 |
+| `request-logger.middleware` | 0% | 中间件，E2E 覆盖 |
+| `security-headers.middleware` | 0% | 中间件，E2E 覆盖 |
+| `all-exceptions.filter` | 92% | 边界分支待补 |
 | 某 Postgres / Redis glue | ~50% | 集成层用 E2E 替代 |
-| Pages (frontend) | ~5% | E2E / Phase 13 计划补 |
+| 大部分 Pages（frontend） | 0% | Timeline / Space / Memoir / Lines 等待补 |
 

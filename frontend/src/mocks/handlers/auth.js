@@ -44,7 +44,7 @@ export const authHandlers = [
     return HttpResponse.json({ error: 'Invalid credentials' }, { status: 401 });
   }),
 
-  http.post('/api/auth/refresh', async ({ request }) => {
+  http.post('/api/auth/refresh', async () => {
     return HttpResponse.json({
       accessToken: 'mock-access-token-' + Date.now(),
       refreshToken: 'mock-refresh-token-' + Date.now(),
