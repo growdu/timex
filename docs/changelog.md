@@ -1,5 +1,29 @@
 # 变更日志
 
+## [Unreleased] — 2026-07-07（真实 AI provider — OpenAI 兼容接入）
+
+### 新增
+- **OpenAI 兼容 Provider** `backend/src/ai/providers/openai.provider.ts`：走标准 Chat Completions
+  API（`${OPENAI_BASE_URL}/chat/completions`），兼容 OpenAI 官方、Azure OpenAI、DeepSeek、
+  Moonshot/Kimi、vLLM、LM Studio 等。
+  - 图片任务用视觉模型 `image_url` 多模态格式；文本任务纯文本；音频以 URL 文本上下文传入。
+  - `isAvailable` = 配了 `OPENAI_API_KEY`；`OPENAI_BASE_URL` / `OPENAI_MODEL` 可配置。
+- **Provider 路由扩展**：`AI_PROVIDER=openai|ollama|mock|auto`（默认 auto，云优先：OpenAI > Ollama > mock）；
+  运行时 provider 抛错仍降级 mock（响应 `provider` 标 `+fallback`）。
+- `openai.provider.spec.ts`：8 tests（请求构造 / 多模态 / 结构化解析 / 错误 / base_url 切换）。
+- 抽取共享 `prompts.ts`（TASK_PROMPTS + tryParseJson），Ollama / OpenAI provider 共用，保证输出风格一致。
+
+### 改动
+- `ollama.provider.ts`：改从 `prompts.ts` 导入（去除重复定义）。
+- `ai.module.ts` / `ai-router.provider.ts`：注入并接入 OpenAIProvider。
+- `llm-provider.interface.ts`：`ProviderRegistry` 加 `openai`。
+- `docker-compose.yml` + `.env.example` + `backend/.env.example`：补 `AI_PROVIDER` / `OPENAI_*` / `OLLAMA_*`。
+- `docs/AI_INTEGRATION.md`：Provider 路由章节更新（三种 provider + 云优先 auto）。
+
+### 校验
+- 后端 tsc 0；jest 234 tests 全绿（+8 openai spec）；lint 0 错。
+
+
 ## [Unreleased] — 2026-07-07（生产 CD — GHCR 镜像自动发布）
 
 ### 新增（阻塞 #6：生产 CD 流水线）

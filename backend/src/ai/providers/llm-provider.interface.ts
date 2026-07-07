@@ -58,5 +58,6 @@ export abstract class LlmProvider {
 export const LLM_PROVIDER = Symbol('LLM_PROVIDER');
 export interface ProviderRegistry {
   ollama: LlmProvider;
+  openai: LlmProvider;
   mock: LlmProvider;
 }

@@ -5,6 +5,7 @@ import { AiJob } from './entities/ai-job.entity';
 import { AiService } from './ai.service';
 import { AiController } from './ai.controller';
 import { OllamaProvider } from './providers/ollama.provider';
+import { OpenAIProvider } from './providers/openai.provider';
 import { MockProvider } from './providers/mock.provider';
 import { AiRouterProvider } from './providers/ai-router.provider';
 
@@ -14,6 +15,7 @@ import { AiRouterProvider } from './providers/ai-router.provider';
   providers: [
     AiService,
     OllamaProvider,
+    OpenAIProvider,
     MockProvider,
     AiRouterProvider, // 路由器作为默认 LlmProvider 注入 AiService
   ],

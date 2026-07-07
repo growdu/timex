@@ -63,6 +63,13 @@ services:
       - S3_PUBLIC_URL=${S3_PUBLIC_URL:-http://localhost:9000/timex-uploads}
       - S3_PRESIGNED_TTL=${S3_PRESIGNED_TTL:-900}
       - MAX_UPLOAD_SIZE=${MAX_UPLOAD_SIZE:-104857600}
+      # AI（auto：配了 OPENAI_API_KEY 用 OpenAI，否则探测 Ollama，否则 mock）
+      - AI_PROVIDER=${AI_PROVIDER:-auto}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o-mini}
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://host.docker.internal:11434}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.2}
     ports:
       - "3000:3000"
     depends_on:
