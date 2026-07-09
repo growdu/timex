@@ -25,6 +25,6 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 # SPA 404 fallback
 RUN cp /usr/share/nginx/html/index.html /usr/share/nginx/html/404.html
 
-EXPOSE 80
+EXPOSE 8090
 
 CMD ["nginx", "-g", "daemon off;"]

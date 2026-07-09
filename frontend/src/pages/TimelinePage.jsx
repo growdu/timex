@@ -1,8 +1,8 @@
 import { Link } from "react-router-dom";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import RichTimeline from "../components/RichTimeline.jsx";
 import LineCard from "../components/LineCard.jsx";
-import FabStack from "../components/FabStack.jsx";
+import AddEntityModal from "../components/AddEntityModal.jsx";
 
 
 const stageToneMap = {
@@ -151,6 +151,7 @@ export default function TimelinePage({
   selectedPlace,
   selectedPerson,
 }) {
+  const [showAdd, setShowAdd] = useState(false);
   const now = useMemo(() => new Date(), []);
   const allEvents = (data && data.events) || [];
   const allPeople = (data && data.people) || [];
@@ -208,6 +209,8 @@ export default function TimelinePage({
   if (totalEvents === 0) {
     return (
       <Layout
+        onAdd={() => setShowAdd(true)}
+        addLabel="添加事件"
         activeNav="timeline"
         session={session}
         uiState={uiState}
@@ -216,7 +219,7 @@ export default function TimelinePage({
         onLogout={onLogout}
         detailLinks={{ event: '/events', place: '/space', person: '/people' }}
         data={data}
-        pageNotice="开始记录第一段记忆，你的时光机器正在等待"
+        pageNotice="时间线"
       >
         <section className="greeting-banner">
           <div>
@@ -240,7 +243,9 @@ export default function TimelinePage({
 
   return (
     <Layout
-      activeNav="timeline"
+      onAdd={() => setShowAdd(true)}
+        addLabel="添加事件"
+        activeNav="timeline"
       session={session}
       uiState={uiState}
       filteredEvents={filteredEvents || []}
@@ -248,7 +253,7 @@ export default function TimelinePage({
       onLogout={onLogout}
       detailLinks={detailLinks}
       data={data}
-      pageNotice="首页聚合：问候、统计、纪念、时间线与近期记忆"
+      pageNotice="时间线"
       rightRail={
         <>
           {featuredEvent && (
@@ -647,7 +652,7 @@ export default function TimelinePage({
       </div>
 
       {/* 浮动操作按钮 + 今日心情 */}
-      <FabStack />
-    </Layout>
+            {showAdd && <AddEntityModal type="event" onClose={() => setShowAdd(false)} />}
+      </Layout>
   );
 }

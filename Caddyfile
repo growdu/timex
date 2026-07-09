@@ -12,12 +12,12 @@
 
 	# API → 后端
 	@api path /api/*
-	reverse_proxy @api backend:3000
+	reverse_proxy @api backend:4000
 
 	# 健康检查 → 后端
 	@health path /health
-	reverse_proxy @health backend:3000
+	reverse_proxy @health backend:4000
 
 	# 其余 → 前端 SPA（nginx）
-	reverse_proxy frontend:80
+	reverse_proxy frontend:8090
 }

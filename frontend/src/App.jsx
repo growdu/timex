@@ -1,8 +1,9 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import AppLayout from "./components/AppLayout.jsx";
 import EventPage from "./pages/EventPage.jsx";
+import LandingPage from "./pages/LandingPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import RegisterPage from "./pages/RegisterPage.jsx";
 import LicensePage from "./pages/LicensePage.jsx";
@@ -11,9 +12,18 @@ import PeoplePage from "./pages/PeoplePage.jsx";
 import PersonPage from "./pages/PersonPage.jsx";
 import PlacePage from "./pages/PlacePage.jsx";
 import SpacePage from "./pages/SpacePage.jsx";
+import DashboardPage from "./pages/DashboardPage.jsx";
 import TimelinePage from "./pages/TimelinePage.jsx";
 import LinesPage from "./pages/LinesPage.jsx";
+import ExportAlbumPage from "./pages/ExportAlbumPage.jsx";
+import ExportStorybookPage from "./pages/ExportStorybookPage.jsx";
+import ExportTimelinePage from "./pages/ExportTimelinePage.jsx";
+import DocsPage from "./pages/DocsPage.jsx";
+import BlogPage from "./pages/BlogPage.jsx";
+import AddEntityModal from "./components/AddEntityModal.jsx";
+import FabStack from "./components/FabStack.jsx";
 import { authApi } from "./api/auth";
+import { dashboardApi } from "./api/dashboard";
 import { eventsApi } from "./api/events";
 import { peopleApi } from "./api/people";
 import { placesApi } from "./api/places";
@@ -87,11 +97,19 @@ export function useLogin() {
   });
 }
 
+export function useDashboardStats() {
+  return useQuery({
+    queryKey: ['dashboard', 'stats'],
+    queryFn: () => dashboardApi.getStats(),
+  });
+}
+
 export function useLogout() {
   const queryClient = useQueryClient();
   return useCallback(() => {
     authApi.logout();
     queryClient.clear();
+    window.location.href = '/login';
   }, [queryClient]);
 }
 
@@ -112,6 +130,7 @@ function ProtectedRoute({ children }) {
 // Inner app component that has access to data
 function AppContent({ user, onLogin }) {
   const logout = useLogout();
+  const [addModal, setAddModal] = useState(null);
   const uiState = useUIStore();
 
   // Fetch all data
@@ -192,7 +211,7 @@ function AppContent({ user, onLogin }) {
   }), [selectedEvent, selectedPlace, selectedPerson]);
 
   // Page notice
-  const pageNotice = "数据来自真实 API，使用筛选器探索记忆";
+  const pageNotice = "";
 
   const handleUiStateChange = useCallback((updates) => {
     useUIStore.setState(updates);
@@ -222,18 +241,55 @@ function AppContent({ user, onLogin }) {
   }), [session, uiState, filteredEvents, years, api, events, people, places, memoirs, selectedEvent, selectedPlace, selectedPerson, handleUiStateChange, logout, detailLinks, pageNotice]);
 
   return (
+    <>
     <AppShell user={user} onLogin={onLogin}>
       <Routes>
-        <Route path="/" element={<Navigate to="/timeline" replace />} />
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
         <Route
           path="/login"
-          element={<Navigate to="/timeline" replace />}
+          element={<Navigate to="/dashboard" replace />}
         />
 
         <Route
           path="/register"
-          element={<Navigate to="/timeline" replace />}
+          element={<Navigate to="/dashboard" replace />}
+        />
+
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <DashboardPage user={user} logout={logout} />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/export/album"
+          element={
+            <ProtectedRoute>
+              <ExportAlbumPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/export/timeline"
+          element={
+            <ProtectedRoute>
+              <ExportTimelinePage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/export/storybook/:memoirId"
+          element={
+            <ProtectedRoute>
+              <ExportStorybookPage />
+            </ProtectedRoute>
+          }
         />
 
         <Route
@@ -353,20 +409,29 @@ function AppContent({ user, onLogin }) {
           }
         />
       </Routes>
-    </AppShell>
+      </AppShell>
+      <FabStack onAddEntity={(type) => setAddModal(type)} />
+      {addModal && <AddEntityModal type={addModal} onClose={() => setAddModal(null)} />}
+    </>
   );
 }
 
 function AppShell({ user, onLogin, children }) {
   const location = useLocation();
   if (!user) {
+    if (location.pathname === '/login') {
+      return <LoginPage onLogin={onLogin} />;
+    }
     if (location.pathname === '/register') {
       return <RegisterPage onLogin={onLogin} />;
     }
-    if (location.pathname !== '/login') {
-      return <Navigate to="/login" replace />;
+    if (location.pathname === '/docs') {
+      return <DocsPage />;
     }
-    return <LoginPage onLogin={onLogin} />;
+    if (location.pathname === '/blog') {
+      return <BlogPage />;
+    }
+    return <LandingPage />;
   }
   return children;
 }

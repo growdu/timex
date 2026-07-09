@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import SpaceMap from "../components/SpaceMap.jsx";
+import AddEntityModal from "../components/AddEntityModal.jsx";
 
 export default function SpacePage({
   Layout,
@@ -12,12 +14,15 @@ export default function SpacePage({
   selectedPlace,
   data,
 }) {
+  const [showAdd, setShowAdd] = useState(false);
   const allPlaces = (data && data.places) || [];
   const allEvents = (data && data.events) || [];
 
   if (!selectedPlace) {
     return (
       <Layout
+        onAdd={() => setShowAdd(true)}
+        addLabel="添加地点"
         activeNav="space"
         session={session}
         uiState={uiState}
@@ -26,7 +31,7 @@ export default function SpacePage({
         onLogout={logout}
         detailLinks={{ event: '/timeline', place: '/space', person: '/people' }}
         data={data}
-        pageNotice="当前停留在空间入口。地点被建模为独立入口，而不是事件上的附属标签。"
+        pageNotice="空间地图"
       >
         <section className="panel-card">
           <div className="panel-title">
@@ -62,7 +67,9 @@ export default function SpacePage({
 
   return (
     <Layout
-      activeNav="space"
+      onAdd={() => setShowAdd(true)}
+        addLabel="添加地点"
+        activeNav="space"
       session={session}
       uiState={uiState}
       filteredEvents={filteredEvents || []}
@@ -70,7 +77,7 @@ export default function SpacePage({
       onLogout={logout}
       detailLinks={detailLinks}
       data={data}
-      pageNotice="当前停留在空间入口。地点被建模为独立入口，而不是事件上的附属标签。"
+      pageNotice="空间地图"
       rightRail={
         <>
           <section className="panel-card">
@@ -219,6 +226,7 @@ export default function SpacePage({
           )}
         </div>
       </section>
-    </Layout>
+            {showAdd && <AddEntityModal type="place" onClose={() => setShowAdd(false)} />}
+      </Layout>
   );
 }

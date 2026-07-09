@@ -61,7 +61,7 @@ export default function PlacePage({
         data={data}
       onLogout={logout}
       detailLinks={detailLinks}
-      pageNotice="当前停留在地点详情页。地点被提升为可独立承载时间切片和人物关系的档案页面。"
+      pageNotice="地点详情"
       rightRail={
         <section className="panel-card">
           <div className="panel-title">

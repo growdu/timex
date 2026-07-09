@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-timex_dev_password}
       POSTGRES_DB: ${DATABASE_NAME:-timex}
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backend/scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -42,7 +42,7 @@ services:
     environment:
       - NODE_ENV=${NODE_ENV:-development}
       - HOST=0.0.0.0
-      - PORT=3000
+      - PORT=4000
       - RUN_MIGRATIONS_ON_BOOT=${RUN_MIGRATIONS_ON_BOOT:-true}
       - DATABASE_HOST=postgres
       - DATABASE_PORT=5432
@@ -71,14 +71,14 @@ services:
       - OLLAMA_HOST=${OLLAMA_HOST:-http://host.docker.internal:11434}
       - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.2}
     ports:
-      - "3000:3000"
+      - "4000:4000"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
+      test: ["CMD", "node", "-e", "fetch('http://localhost:4000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -93,7 +93,7 @@ services:
         - VITE_API_URL=${VITE_API_URL:-/api}
     container_name: timex-frontend
     ports:
-      - "80:80"
+      - "8090:8090"
     depends_on:
       - backend
     networks:

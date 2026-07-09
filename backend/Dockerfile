@@ -29,10 +29,10 @@ COPY --from=builder /app/scripts/migrations ./scripts/migrations
 
 # 健康检查（间隔 30s，超时 3s，启动等待 10s）
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s \
-  CMD node -e "fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+  CMD node -e "fetch('http://localhost:4000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
 USER nestjs
 
-EXPOSE 3000
+EXPOSE 4000
 
 CMD ["node", "dist/main"]

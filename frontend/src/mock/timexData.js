@@ -1,5 +1,6 @@
 export const timexData = {
   navViews: [
+    { id: "dashboard", label: "大屏", note: "个人维度统计总览", to: "/dashboard" },
     { id: "timeline", label: "时间线", note: "按事件回看人生轨迹", to: "/timeline" },
     { id: "space", label: "空间", note: "按地点重走记忆路线", to: "/space" },
     { id: "people", label: "人物", note: "按关系检索共同经历", to: "/people" },

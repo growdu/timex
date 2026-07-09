@@ -63,7 +63,7 @@ export default function PersonPage({
         data={data}
       onLogout={logout}
       detailLinks={detailLinks}
-      pageNotice="当前停留在人物详情页。人物页会把共同地点、关键事件和可写成章节的片段收拢在一起。"
+      pageNotice="人物详情"
       rightRail={
         <section className="panel-card">
           <div className="panel-title">

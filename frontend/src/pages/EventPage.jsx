@@ -71,7 +71,7 @@ export default function EventPage({
         data={data}
       onLogout={logout}
       detailLinks={detailLinks}
-      pageNotice="当前停留在事件详情页。事件是时间、空间、人物三条主轴的汇合点。"
+      pageNotice="事件详情"
       rightRail={
         <section className="panel-card">
           <div className="panel-title">

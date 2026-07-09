@@ -1,7 +1,8 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { AiActionButton } from "../components/AiActionButton";
+import AddEntityModal from "../components/AddEntityModal.jsx";
 
 export default function MemoirPage({
   Layout,
@@ -15,6 +16,7 @@ export default function MemoirPage({
   selectedPlace,
   selectedPerson,
 }) {
+  const [showAdd, setShowAdd] = useState(false);
   const memoirs = useMemo(() => (data && data.memoirs) || [], [data]);
   const queryClient = useQueryClient();
 
@@ -27,6 +29,8 @@ export default function MemoirPage({
   if (memoirs.length === 0) {
     return (
       <Layout
+        onAdd={() => setShowAdd(true)}
+        addLabel="创建回忆录"
         activeNav="memoir"
         session={session}
         uiState={uiState}
@@ -35,7 +39,7 @@ export default function MemoirPage({
         data={data}
         onLogout={logout}
         detailLinks={{ event: '/timeline', place: '/space', person: '/people' }}
-        pageNotice="当前停留在回忆录编排路径。这里是 React 版编辑器工作台起点，后续可接入真实草稿保存。"
+        pageNotice="回忆录"
       >
         <section className="panel-card">
           <div className="panel-title">
@@ -66,7 +70,9 @@ export default function MemoirPage({
 
   return (
     <Layout
-      activeNav="memoir"
+      onAdd={() => setShowAdd(true)}
+        addLabel="创建回忆录"
+        activeNav="memoir"
       session={session}
       uiState={uiState}
       filteredEvents={filteredEvents || []}
@@ -74,7 +80,7 @@ export default function MemoirPage({
         data={data}
       onLogout={logout}
       detailLinks={detailLinks}
-      pageNotice="当前停留在回忆录编排路径。这里是 React 版编辑器工作台起点，后续可接入真实草稿保存。"
+      pageNotice="回忆录"
       rightRail={
         <>
           <section className="panel-card">
@@ -197,6 +203,7 @@ export default function MemoirPage({
           </div>
         </div>
       </section>
-    </Layout>
+            {showAdd && <AddEntityModal type="memoir" onClose={() => setShowAdd(false)} />}
+      </Layout>
   );
 }

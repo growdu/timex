@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import RelationshipGraph from "../components/RelationshipGraph.jsx";
+import AddEntityModal from "../components/AddEntityModal.jsx";
 
 export default function PeoplePage({
   Layout,
@@ -12,11 +14,14 @@ export default function PeoplePage({
   selectedPerson,
   data,
 }) {
+  const [showAdd, setShowAdd] = useState(false);
   const allPeople = (data && data.people) || [];
 
   if (!selectedPerson) {
     return (
       <Layout
+        onAdd={() => setShowAdd(true)}
+        addLabel="添加人物"
         activeNav="people"
         session={session}
         uiState={uiState}
@@ -25,7 +30,7 @@ export default function PeoplePage({
         onLogout={logout}
         detailLinks={{ event: '/timeline', place: '/space', person: '/people' }}
         data={data}
-        pageNotice="当前停留在人物入口。关系不是联系人列表，而是共同经历和叙事线索的索引。"
+        pageNotice="人物关系"
       >
         <section className="panel-card">
           <div className="panel-title">
@@ -54,7 +59,9 @@ export default function PeoplePage({
 
   return (
     <Layout
-      activeNav="people"
+      onAdd={() => setShowAdd(true)}
+        addLabel="添加人物"
+        activeNav="people"
       session={session}
       uiState={uiState}
       filteredEvents={filteredEvents || []}
@@ -62,7 +69,7 @@ export default function PeoplePage({
       onLogout={logout}
       detailLinks={detailLinks}
       data={data}
-      pageNotice="当前停留在人物入口。关系不是联系人列表，而是共同经历和叙事线索的索引。"
+      pageNotice="人物关系"
       rightRail={
         <>
           <section className="panel-card">
@@ -192,6 +199,7 @@ export default function PeoplePage({
           )}
         </div>
       </section>
-    </Layout>
+            {showAdd && <AddEntityModal type="person" onClose={() => setShowAdd(false)} />}
+      </Layout>
   );
 }

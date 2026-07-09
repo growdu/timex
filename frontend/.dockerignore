@@ -9,7 +9,6 @@ coverage
 README.md
 Dockerfile
 docker-compose.yml
-nginx.conf
 src/test
 src/mocks
 *.test.jsx

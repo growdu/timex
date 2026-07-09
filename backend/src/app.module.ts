@@ -16,6 +16,8 @@ import { MemoirsModule } from './memoirs/memoirs.module';
 import { UploadModule } from './upload/upload.module';
 import { AppThrottlerModule } from './throttler/throttler.module';
 import { AiModule } from './ai/ai.module';
+import { DashboardModule } from './dashboard/dashboard.module';
+import { ExportModule } from './export/export.module';
 import { SecurityHeadersMiddleware } from './common/middleware/security-headers.middleware';
 import { RequestLoggerMiddleware } from './common/middleware/request-logger.middleware';
 
@@ -40,6 +42,8 @@ import { RequestLoggerMiddleware } from './common/middleware/request-logger.midd
     UploadModule,
     AppThrottlerModule,
     AiModule,
+    DashboardModule,
+    ExportModule,
   ],
   controllers: [AppController],
   providers: [AppService],

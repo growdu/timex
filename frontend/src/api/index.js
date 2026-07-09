@@ -7,3 +7,5 @@ export { default as peopleApi } from './people';
 export { default as placesApi } from './places';
 export { default as memoirsApi } from './memoirs';
 export { default as uploadApi } from './upload';
+export { default as dashboardApi } from './dashboard';
+export { default as exportApi } from './export';
