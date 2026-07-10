@@ -1,8 +1,7 @@
 import { Link } from "react-router-dom";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import RichTimeline from "../components/RichTimeline.jsx";
 import LineCard from "../components/LineCard.jsx";
-import AddEntityModal from "../components/AddEntityModal.jsx";
 
 
 const stageToneMap = {
@@ -151,7 +150,6 @@ export default function TimelinePage({
   selectedPlace,
   selectedPerson,
 }) {
-  const [showAdd, setShowAdd] = useState(false);
   const now = useMemo(() => new Date(), []);
   const allEvents = (data && data.events) || [];
   const allPeople = (data && data.people) || [];
@@ -209,8 +207,6 @@ export default function TimelinePage({
   if (totalEvents === 0) {
     return (
       <Layout
-        onAdd={() => setShowAdd(true)}
-        addLabel="添加事件"
         activeNav="timeline"
         session={session}
         uiState={uiState}
@@ -243,8 +239,6 @@ export default function TimelinePage({
 
   return (
     <Layout
-      onAdd={() => setShowAdd(true)}
-        addLabel="添加事件"
         activeNav="timeline"
       session={session}
       uiState={uiState}
@@ -652,7 +646,6 @@ export default function TimelinePage({
       </div>
 
       {/* 浮动操作按钮 + 今日心情 */}
-            {showAdd && <AddEntityModal type="event" onClose={() => setShowAdd(false)} />}
       </Layout>
   );
 }

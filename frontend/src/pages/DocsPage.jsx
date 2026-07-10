@@ -139,7 +139,7 @@ export default function DocsPage() {
           })}
           <div className="docs-cta">
             <p>准备好了吗？</p>
-            <Link to="/register" className="primary-button">免费注册 -></Link>
+            <Link to="/register" className="primary-button">免费注册 →</Link>
           </div>
         </main>
       </div>

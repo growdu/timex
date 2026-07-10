@@ -67,7 +67,6 @@ button {
 .right-rail,
 .panel-card,
 .hero-card,
-.auth-story,
 .auth-card,
 .editor-shell,
 .editor-sidebar,
@@ -145,7 +144,6 @@ button {
 .demo-account,
 .event-card,
 .detail-box,
-.auth-feature,
 .tag,
 .tag-button,
 .mini-link,
@@ -401,8 +399,6 @@ button {
 .tag-row,
 .toolbar-row,
 .action-row,
-.auth-panel,
-.auth-feature-grid,
 .auth-form,
 .demo-account-list,
 .editor-document {
@@ -487,7 +483,6 @@ button {
 .cluster-card strong,
 .event-card h3,
 .auth-card h2,
-.auth-feature strong,
 .demo-account strong {
   color: var(--ink);
 }
@@ -598,15 +593,6 @@ button {
   padding: 18px;
 }
 
-.auth-shell {
-  display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(320px, 0.5fr);
-  gap: 24px;
-  min-height: 100vh;
-  padding: 28px;
-}
-
-.auth-story,
 .auth-card {
   padding: 24px;
 }
@@ -617,15 +603,6 @@ button {
   font-family: var(--font-serif);
   font-size: clamp(36px, 4vw, 56px);
   line-height: 1.08;
-}
-
-.auth-feature-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.auth-feature {
-  padding: 16px;
-  background: rgba(255, 255, 255, 0.58);
 }
 
 .auth-card h2 {
@@ -676,7 +653,6 @@ button {
 @media (max-width: 1280px) {
   .topbar,
   .workspace,
-  .auth-shell,
   .editor-shell,
   .stage-grid {
     grid-template-columns: 1fr;
@@ -692,16 +668,12 @@ button {
 }
 
 @media (max-width: 900px) {
-  .app-shell,
-  .auth-shell {
+  .app-shell {
     padding: 16px;
   }
 
   .summary-grid,
   .detail-grid,
-  .auth-feature-grid {
-    grid-template-columns: 1fr;
-  }
 
   .event-card {
     grid-template-columns: 1fr;
@@ -2878,34 +2850,6 @@ button {
 /* ── 统计大屏（全宽独立页面）── */
 .dash-standalone { min-height: 100vh; background: var(--bg); }
 
-.dash-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 40px;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  background: rgba(247, 241, 233, 0.92);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--line);
-}
-
-.dash-header .brand strong { font-size: 20px; display: block; line-height: 1.2; }
-.dash-header .brand span { font-size: 12px; color: var(--muted); }
-
-.dash-nav { display: flex; gap: 4px; align-items: center; }
-.dash-nav-link {
-  padding: 8px 16px;
-  font-size: 15px;
-  color: var(--muted);
-  border-radius: var(--radius-pill);
-  transition: background 0.2s, color 0.2s;
-}
-.dash-nav-link:hover { background: rgba(0, 0, 0, 0.05); color: var(--ink); }
-.dash-nav-link.is-active { background: var(--ink); color: white; }
-.dash-nav .ghost-button { margin-left: 8px; padding: 8px 20px; font-size: 14px; }
-
 .dash-content {
   max-width: 1200px;
   margin: 0 auto;
@@ -3030,10 +2974,8 @@ button {
 @media (max-width: 700px) {
   .dash-stats-row { grid-template-columns: repeat(2, 1fr); }
   .dash-grid, .dash-grid-4 { grid-template-columns: 1fr; }
-  .dash-header { padding: 12px 16px; flex-wrap: wrap; gap: 8px; }
   .dash-content { padding: 20px 16px 40px; }
   .dash-greeting h1 { font-size: 28px; }
-  .dash-nav-link { padding: 6px 10px; font-size: 13px; }
 }
 
 
@@ -3229,36 +3171,6 @@ button {
   margin-bottom: 16px;
 }
 .page-action-bar .primary-button { padding: 10px 24px; font-size: 15px; }
-
-/* Nav item with + button */
-.nav-item-group {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.nav-add-btn {
-  width: 22px;
-  height: 22px;
-  border: none;
-  background: rgba(0, 0, 0, 0.06);
-  border-radius: 50%;
-  font-size: 15px;
-  line-height: 1;
-  cursor: pointer;
-  color: var(--muted);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.2s, color 0.2s, transform 0.2s;
-  flex-shrink: 0;
-}
-
-.nav-add-btn:hover {
-  background: var(--ink);
-  color: white;
-  transform: scale(1.15);
-}
 
 /* ── 落地页补充 ── */
 .landing-header-link {

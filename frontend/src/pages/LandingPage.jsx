@@ -192,7 +192,7 @@ export default function LandingPage() {
           <div className="landing-cta-inner">
             <h2>开始记录你的时光</h2>
             <p>注册即获 14 天全功能试用，无需信用卡。</p>
-            <Link to="/register" className="primary-button">免费注册 -></Link>
+            <Link to="/register" className="primary-button">免费注册 →</Link>
           </div>
         </section>
       </main>

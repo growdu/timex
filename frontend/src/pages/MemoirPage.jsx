@@ -1,8 +1,7 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { AiActionButton } from "../components/AiActionButton";
-import AddEntityModal from "../components/AddEntityModal.jsx";
 
 export default function MemoirPage({
   Layout,
@@ -16,7 +15,6 @@ export default function MemoirPage({
   selectedPlace,
   selectedPerson,
 }) {
-  const [showAdd, setShowAdd] = useState(false);
   const memoirs = useMemo(() => (data && data.memoirs) || [], [data]);
   const queryClient = useQueryClient();
 
@@ -29,8 +27,6 @@ export default function MemoirPage({
   if (memoirs.length === 0) {
     return (
       <Layout
-        onAdd={() => setShowAdd(true)}
-        addLabel="创建回忆录"
         activeNav="memoir"
         session={session}
         uiState={uiState}
@@ -70,8 +66,6 @@ export default function MemoirPage({
 
   return (
     <Layout
-      onAdd={() => setShowAdd(true)}
-        addLabel="创建回忆录"
         activeNav="memoir"
       session={session}
       uiState={uiState}
@@ -203,7 +197,6 @@ export default function MemoirPage({
           </div>
         </div>
       </section>
-            {showAdd && <AddEntityModal type="memoir" onClose={() => setShowAdd(false)} />}
       </Layout>
   );
 }

@@ -87,14 +87,14 @@ export default function BlogPage() {
               <p>{p.excerpt}</p>
               <div className="blog-card-footer">
                 <span className="blog-card-date">{p.date}</span>
-                <Link to="/blog" className="blog-card-link">阅读 -></Link>
+                <Link to="/blog" className="blog-card-link">阅读 →</Link>
               </div>
             </article>
           ))}
         </div>
         <div className="blog-cta">
           <h2>开始记录你的时光</h2>
-          <Link to="/register" className="primary-button">免费注册 -></Link>
+          <Link to="/register" className="primary-button">免费注册 →</Link>
         </div>
       </main>
     </div>

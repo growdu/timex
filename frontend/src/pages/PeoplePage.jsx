@@ -1,7 +1,5 @@
-import { useState } from "react";
 import { Link } from "react-router-dom";
 import RelationshipGraph from "../components/RelationshipGraph.jsx";
-import AddEntityModal from "../components/AddEntityModal.jsx";
 
 export default function PeoplePage({
   Layout,
@@ -14,14 +12,11 @@ export default function PeoplePage({
   selectedPerson,
   data,
 }) {
-  const [showAdd, setShowAdd] = useState(false);
   const allPeople = (data && data.people) || [];
 
   if (!selectedPerson) {
     return (
       <Layout
-        onAdd={() => setShowAdd(true)}
-        addLabel="添加人物"
         activeNav="people"
         session={session}
         uiState={uiState}
@@ -59,8 +54,6 @@ export default function PeoplePage({
 
   return (
     <Layout
-      onAdd={() => setShowAdd(true)}
-        addLabel="添加人物"
         activeNav="people"
       session={session}
       uiState={uiState}
@@ -199,7 +192,6 @@ export default function PeoplePage({
           )}
         </div>
       </section>
-            {showAdd && <AddEntityModal type="person" onClose={() => setShowAdd(false)} />}
       </Layout>
   );
 }

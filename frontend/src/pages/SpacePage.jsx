@@ -1,7 +1,5 @@
-import { useState } from "react";
 import { Link } from "react-router-dom";
 import SpaceMap from "../components/SpaceMap.jsx";
-import AddEntityModal from "../components/AddEntityModal.jsx";
 
 export default function SpacePage({
   Layout,
@@ -14,15 +12,12 @@ export default function SpacePage({
   selectedPlace,
   data,
 }) {
-  const [showAdd, setShowAdd] = useState(false);
   const allPlaces = (data && data.places) || [];
   const allEvents = (data && data.events) || [];
 
   if (!selectedPlace) {
     return (
       <Layout
-        onAdd={() => setShowAdd(true)}
-        addLabel="添加地点"
         activeNav="space"
         session={session}
         uiState={uiState}
@@ -67,8 +62,6 @@ export default function SpacePage({
 
   return (
     <Layout
-      onAdd={() => setShowAdd(true)}
-        addLabel="添加地点"
         activeNav="space"
       session={session}
       uiState={uiState}
@@ -226,7 +219,6 @@ export default function SpacePage({
           )}
         </div>
       </section>
-            {showAdd && <AddEntityModal type="place" onClose={() => setShowAdd(false)} />}
       </Layout>
   );
 }
