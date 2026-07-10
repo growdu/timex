@@ -1,5 +1,43 @@
 # 变更日志
 
+## [v0.1.0] — 2026-07-10
+
+> 🎉 **首个公开版本** — 个人成长记录与人生回忆沉淀系统。
+> 时光机器从今天起对外开放，包含统计大屏、回忆录编辑、可打印导出、文档与博客。
+
+### 新增
+- **统计大屏 (`DashboardPage`)**：登录后默认首页。卡片式布局展示事件/人物/地点/瞬间/回忆录总数、时间线分布、阶段分布、最近事件、地点分布、核心人物、素材构成、回忆录列表。
+- **回忆录编辑器**：三栏布局（章节树 + 正文区 + 来源库），支持草稿/已发布/公开状态，可直接引用事件作为素材。
+- **导出系统 (`ExportAlbumPage` / `ExportStorybookPage` / `ExportTimelinePage`)**：相册、时间线、故事书三种格式，浏览器原生「保存为 PDF」可打印装订。
+- **浮动操作按钮 (`FabStack`)**：右下角 + 按钮，按当前页面智能推荐可创建的内容类型。
+- **OpenAI 兼容 AI Provider** (`backend/src/ai/providers/openai.provider.ts`)：标准 Chat Completions API，兼容 OpenAI 官方、Azure OpenAI、DeepSeek、Moonshot/Kimi、vLLM、LM Studio 等。云优先路由 (OpenAI > Ollama > mock)。
+- **CI/CD 流水线 (`.github/workflows/`)**：
+  - `ci.yml` 持续集成（typecheck + lint + test）
+  - `docker-publish.yml` 镜像自动发布到 GitHub Container Registry（`ghcr.io/growdu/timex-{backend,frontend}`），main 分支推 `latest`，v* tag 推 semver 标签
+  - `deploy-docs.yml` / `deploy-pages.yml` 文档自动部署
+- **生产部署**：`nginx` 统一 `/api` 反代 + `Caddy` 自动 HTTPS + Docker Compose 一键起。
+- **SQL 迁移运行器**：schema 增量演进 + 启动自动应用。
+- **文档与博客** (`DocsPage` / `BlogPage`)：12 节使用手册、3 个真实故事、对比表、FAQ；博客含 4 篇文章。
+
+### 体验账号
+| 账号 | 密码 | 角色 | 故事 |
+|------|------|------|------|
+| `demo@timex.com` | `demo123` | 时光记录者 | 2024 创业 + 西藏 + 小雨出生 |
+| `maker@timex.test` | `timex2026` | 周屿 | 三城记（北漂→杭州→深圳） |
+| `family@timex.test` | `timex2026` | 沈棠 | 小满成长记（家庭档案） |
+
+### 部署
+- **生产地址**：http://119.29.129.236:8090 （腾讯云）
+- **镜像**：`ghcr.io/growdu/timex-backend:0.1.0`、`ghcr.io/growdu/timex-frontend:0.1.0`
+- **端口**：8090 (frontend) / 4000 (backend) / 5433 (postgres) / 6379 (redis) / 9000+9001 (minio)
+- **数据**：自部署 PostgreSQL + MinIO + Redis，数据完全自主可控
+
+### 已知限制
+- 原生移动 App 未发布（Web 端响应式支持手机访问）
+- 多用户协作尚为单租户（每位用户独立数据空间）
+
+---
+
 ## [Unreleased] — 2026-07-07（真实 AI provider — OpenAI 兼容接入）
 
 ### 新增
