@@ -2,47 +2,94 @@ import { Link } from "react-router-dom";
 
 const C = ['#3b5bdb', '#0c8599', '#e64980', '#7048e8', '#2f9e44', '#f08c00'];
 
-const LINES = [
-  { icon: "⏱", name: "时间", desc: "以事件为核心的时间线，按年月回顾人生每一个节点", color: C[0] },
-  { icon: "🗺", name: "空间", desc: "地图可视化标记足迹，串联每座城市与旅途的故事", color: C[1] },
-  { icon: "❤", name: "感情", desc: "关系图谱珍藏相遇，记录每段同行的时光", color: C[2] },
-  { icon: "💼", name: "事业", desc: "职业里程碑追踪成长，沉淀每个关键决策", color: C[3] },
-  { icon: "🏡", name: "亲情", desc: "家庭档案三代传承，孩子的成长一个不落", color: C[4] },
-  { icon: "👥", name: "朋友", desc: "友谊年表记录陪伴，重温一起笑过的岁月", color: C[5] },
+// 用三个真实故事作为开场，每个故事都展示"用什么方式记录、产出什么"
+const STORIES = [
+  {
+    icon: "👶",
+    title: "沈棠的故事 · 家庭档案",
+    user: "孩子妈妈",
+    color: C[4],
+    scene: "从 2018 年小满出生，到 2024 年背上书包——她要的不是一堆照片，而是一本能每年拿出来翻的家庭册。",
+    how: [
+      "📅 事件：6 个核心（出生、入园、上小学、第一次夏令营……）",
+      "👥 人物：小满、老公、外婆三代时间线交织",
+      "📖 回忆录：《小满成长记》三章 + 已发布",
+      "🖨 成果：每年打印一本年度相册，放在书架上",
+    ],
+    demo: "family@timex.test",
+  },
+  {
+    icon: "🚀",
+    title: "周屿的故事 · 城市迁移",
+    user: "独立开发者",
+    color: C[1],
+    scene: "2023 年从武汉到北京，2024 年南下杭州，2025 年又到深圳——三年三座城市，他想看见自己的轨迹。",
+    how: [
+      "📅 事件：7 个核心（北漂、入职、决定南下、创业、迁移……）",
+      "🗺 空间：地图上三座城市清晰排列，时间线贯穿",
+      "👥 人物：合伙人林浩 / 杭州同事 / 深圳朋友，关系网随迁移变化",
+      "📖 回忆录：《我的三城记》三章：北漂三年 / 杭州的春天 / 深圳湾的日落",
+    ],
+    demo: "maker@timex.test",
+  },
+  {
+    icon: "✨",
+    title: "创业者的故事 · 年度复盘",
+    user: "2024 关键转折年",
+    color: C[3],
+    scene: "创业启动、西藏自驾、女儿出生、融资完成——一年里的事业里程碑和家庭大事，他要看得清楚、分得明白。",
+    how: [
+      "📅 事件：5 个核心（创业会议、自驾、女儿出生、融资、新办公室）",
+      "📊 大屏：年度时间线分布 + 阶段筛选一次看清",
+      "⚖ 权重：把\"女儿出生\"标 100，自动浮在年度 Top",
+      "📖 回忆录：《我的 2024》三章已发布",
+    ],
+    demo: "demo@timex.com",
+  },
 ];
 
-const FEATURES = [
-  { icon: "📖", title: "回忆录编辑器", desc: "章节树、正文区、来源库三栏展开，将散落的事件编排成完整的人生故事书", color: C[0] },
-  { icon: "✨", title: "AI 智能增强", desc: "自动标注照片内容、转写音频、生成事件摘要，让回忆整理事半功倍", color: C[1] },
-  { icon: "🔒", title: "隐私买断制", desc: "一次性买断终身使用，数据完全自主可控，绝无订阅绑架", color: C[2] },
-  { icon: "📸", title: "多模态素材", desc: "照片、视频、音频、文字统一管理，一个事件可以同时包含多种素材", color: C[3] },
-  { icon: "🔗", title: "事件关联引擎", desc: "人物、地点、瞬间自动串联，从任意维度都能找到同一段记忆", color: C[4] },
-  { icon: "📊", title: "成长统计大屏", desc: "年度回顾、关系密度、空间迁移可视化，用数据看见自己的成长", color: C[5] },
+// 核心亮点：差异化的能力，不是功能堆砌
+const HIGHLIGHTS = [
+  {
+    icon: "📅",
+    title: "事件优先，不是日记不是相册",
+    desc: "以「发生了什么」为单元。一个月后回看，事件还在；日记/相册里早已淹没。",
+  },
+  {
+    icon: "🧭",
+    title: "六条线导航，发现被遗忘的角落",
+    desc: "时间 / 空间 / 感情 / 事业 / 亲情 / 朋友——同样 200 条事件，六种看法。",
+  },
+  {
+    icon: "📖",
+    title: "从素材到故事书：回忆录编辑器",
+    desc: "章节树 + 正文区 + 来源库三栏。写到一半扔下，半年后回来还能续。",
+  },
+  {
+    icon: "🖨",
+    title: "可打印成册：让数字成为礼物",
+    desc: "相册 / 时间线 / 故事书三种格式，一键导出为可打印的 PDF。",
+  },
+  {
+    icon: "🔒",
+    title: "数据自主，隐私买断",
+    desc: "支持自部署，数据完全在你自己的服务器上。无月费、无订阅、无广告。",
+  },
+  {
+    icon: "🤖",
+    title: "可选 AI 增强，不强制云依赖",
+    desc: "支持 OpenAI 兼容 / Ollama 本地模型。未配置时降级为 Mock 模式。",
+  },
 ];
 
-const WHYS = [
-  { icon: "🔐", title: "数据自主", desc: "你的数据存储在你自己的服务器上，不依赖任何云平台，彻底掌控隐私" },
-  { icon: "📅", title: "事件优先", desc: "不是流水账日记，不是散乱相册--以「发生了什么」为核心，串联一切素材" },
-  { icon: "🧭", title: "六线导航", desc: "时间·空间·感情·事业·亲情·朋友，六个维度审视人生，发现被忽略的角落" },
-  { icon: "🖨", title: "导出成册", desc: "一键导出相册、时间线或故事书，打印装订，让数字记忆变成实体珍藏" },
-];
-
+// 谁会用它
 const AUDIENCES = [
-  { icon: "🚀", title: "创业者 / 自由职业者", desc: "记录创业历程，沉淀每个关键决策与里程碑事件", color: C[0] },
-  { icon: "✈️", title: "旅行爱好者", desc: "地图标记足迹，串联旅途故事与沿途风景", color: C[1] },
-  { icon: "👨‍👩‍👧", title: "家庭档案整理者", desc: "孩子的成长、家人的故事，一个都不落下", color: C[2] },
-  { icon: "✍️", title: "写作者 / 创作者", desc: "灵感素材库，回忆录草稿随时展开写作", color: C[3] },
-  { icon: "🎓", title: "学生 / 职场新人", desc: "人生节点回顾，规划下一步成长方向", color: C[4] },
-  { icon: "🌱", title: "人生回顾者", desc: "任何想认真回望来路、规划未来的人", color: C[5] },
-];
-
-const SCENARIOS = [
-  { icon: "📅", title: "年度回顾", desc: "按年月梳理事件，一键生成全年大事记", color: C[0] },
-  { icon: "🏙️", title: "城市迁移", desc: "标记每座城市的起止时间，可视化人生轨迹", color: C[1] },
-  { icon: "👶", title: "孩子成长档案", desc: "从出生到入学，记录每一个珍贵的第一次", color: C[2] },
-  { icon: "🏔️", title: "旅行回忆", desc: "地图 + 照片 + 文字，重建完整旅途体验", color: C[3] },
-  { icon: "📈", title: "创业历程", desc: "里程碑事件 + 团队关系 + 关键复盘记录", color: C[4] },
-  { icon: "🤝", title: "人物关系梳理", desc: "关系图谱透视，谁是你生命中重要的人", color: C[5] },
+  { icon: "🧒", title: "为孩子做成长档案的父母", desc: "从第一声啼哭到小学入学，每年都有清晰可翻的轨迹" },
+  { icon: "✈️", title: "热爱旅行和记录的人", desc: "把每次旅行的地图、照片、感悟串成可分享的游记" },
+  { icon: "🚀", title: "记录创业 / 职业转折的奋斗者", desc: "关键决策、合伙人、里程碑沉淀成自己的人生复盘" },
+  { icon: "✍️", title: "准备写回忆录 / 自传的写作者", desc: "素材库 + 章节编辑，零散笔记直接编排成书" },
+  { icon: "🏠", title: "整理家庭三代档案的家族记录者", desc: "孩子成长、父母晚年、自己的中年，一处全景可见" },
+  { icon: "🌱", title: "任何想认真回望来路、规划未来的人", desc: "年度回顾、城市迁移、关系梳理——让数据看见自己" },
 ];
 
 const PLANS = [
@@ -52,12 +99,11 @@ const PLANS = [
 ];
 
 const FAQS = [
-  { q: "我的数据安全吗？", a: "数据存储在你部署的服务器上（PostgreSQL 数据库 + 对象存储），你完全拥有数据主权。我们不接触你的任何数据。" },
+  { q: "我的数据安全吗？", a: "支持自部署，数据存储在你自己的 PostgreSQL + MinIO 服务器上，你完全拥有数据主权。SaaS 版数据隔离。" },
   { q: "试用到期后数据会丢失吗？", a: "不会。试用到期后账号功能受限，但数据完整保留。购买 License 后即可恢复全部功能。" },
-  { q: "可以导出数据吗？", a: "可以。支持导出时光相册、完整时间线和故事书三种格式，可打印或保存为 PDF。" },
-  { q: "支持多人使用吗？", a: "每个用户有独立的数据空间，互不可见。可以注册多个账号分别使用。" },
-  { q: "AI 功能需要额外付费吗？", a: "不需要。AI 功能包含在年费和买断方案中，支持 OpenAI 兼容接口和本地 Ollama。" },
-  { q: "如何购买 License？", a: "在系统内 License 页面输入授权码激活。支持年费（¥99/年）和一次性买断（¥399起）。" },
+  { q: "可以导出数据吗？", a: "可以。支持相册/时间线/故事书三种格式导出为 PDF，也可 JSON 全量导出做备份。" },
+  { q: "AI 功能需要什么配置？", a: "支持 OpenAI 兼容接口（含 DeepSeek、Azure）和本地 Ollama。未配置时降级为 Mock 模式，核心功能不受影响。" },
+  { q: "如何购买 License？", a: "在系统内 License 页面输入授权码激活，或联系 growdu@gmail.com。" },
 ];
 
 export default function LandingPage() {
@@ -77,69 +123,82 @@ export default function LandingPage() {
       </header>
 
       <main className="landing-main">
-        {/* Hero */}
+        {/* ====== Hero：用一段话+一个故事开场，让用户立刻知道能用来做什么 ====== */}
         <section className="landing-hero">
           <div className="landing-hero-inner">
             <span className="section-eyebrow">Personal Growth Archive</span>
-            <h1>用六条线，<br />串联你的人生。</h1>
-            <p>时光机器是一款面向个人成长记录与人生回忆沉淀的多维时间档案系统。记录事件、管理人物、标记地点、整理回忆录--让你的每一段经历都有迹可循，让回忆不再散落。</p>
-            <div className="landing-cta">
-              <Link to="/register" className="primary-button">免费开始 -></Link>
-              <Link to="/docs" className="ghost-button">了解文档</Link>
+            <h1>把人生，<br />编成一本书。</h1>
+            <p className="landing-hero-sub">
+              时光机器是一款让散落在手机、相册、笔记本里的素材<strong>自己会说话</strong>的产品——以「事件」为单元，
+              把照片、文字、声音、视频组织在六条线上（时间 / 空间 / 感情 / 事业 / 亲情 / 朋友），
+              最终产出<strong>可打印的相册、时间线或故事书</strong>。
+            </p>
+            <div className="landing-hero-uses">
+              <span>📅 记录</span><span>·</span>
+              <span>🗺 标记</span><span>·</span>
+              <span>👥 关联</span><span>·</span>
+              <span>📖 写作</span><span>·</span>
+              <span>🖨 打印</span>
             </div>
+            <div className="landing-cta">
+              <Link to="/register" className="primary-button">免费开始 →</Link>
+              <Link to="/login" className="ghost-button">查看体验账号</Link>
+            </div>
+            <p className="landing-hero-hint">
+              无需注册 · 登录页选「demo / maker / family」任意一个体验账号，密码自动填充
+            </p>
           </div>
         </section>
 
-        {/* 六条线 */}
+        {/* ====== 三个真实故事：用真实场景告诉用户"我能用它做什么" ====== */}
         <section className="landing-section landing-section-tinted">
-          <h2 className="landing-section-title">六条线维度导航</h2>
-          <p className="landing-section-sub">从六个维度审视你的人生，发现被遗忘的角落</p>
-          <div className="landing-lines">
-            {LINES.map((l) => (
-              <div className="landing-line-card" key={l.name} style={{ background: `linear-gradient(135deg, ${l.color}15, rgba(255,255,255,0.7))` }}>
-                <div className="icon-badge" style={{ background: `${l.color}1a`, color: l.color }}>{l.icon}</div>
-                <strong>{l.name}</strong>
-                <p>{l.desc}</p>
-              </div>
+          <h2 className="landing-section-title">它能用来做什么？三个真实故事</h2>
+          <p className="landing-section-sub">登录后用下面的体验账号看完整内容——所有故事数据都已内置在系统中</p>
+          <div className="landing-stories">
+            {STORIES.map((s) => (
+              <article className="landing-story-card" key={s.title} style={{ borderColor: `${s.color}40` }}>
+                <div className="landing-story-head" style={{ background: `linear-gradient(135deg, ${s.color}1a, transparent)` }}>
+                  <span className="landing-story-icon" style={{ background: `${s.color}26`, color: s.color }}>{s.icon}</span>
+                  <div>
+                    <strong>{s.title}</strong>
+                    <span className="landing-story-user">{s.user}</span>
+                  </div>
+                </div>
+                <p className="landing-story-scene">{s.scene}</p>
+                <ul className="landing-story-how">
+                  {s.how.map((h, i) => <li key={i}>{h}</li>)}
+                </ul>
+                <div className="landing-story-foot">
+                  <span className="landing-story-demo">体验账号：<code>{s.demo}</code></span>
+                  <Link to="/login" className="landing-story-link">立即查看 →</Link>
+                </div>
+              </article>
             ))}
           </div>
         </section>
 
-        {/* 核心功能 */}
+        {/* ====== 六大核心亮点：差异化能力 ====== */}
         <section className="landing-section">
-          <h2 className="landing-section-title">核心功能</h2>
-          <p className="landing-section-sub">不止于记录，更在于串联、整理与传承</p>
-          <div className="landing-features">
-            {FEATURES.map((f) => (
-              <div className="landing-feature-item" key={f.title}>
-                <div className="icon-badge icon-badge-sm" style={{ background: `${f.color}1a`, color: f.color }}>{f.icon}</div>
-                <div><strong>{f.title}</strong><p>{f.desc}</p></div>
+          <h2 className="landing-section-title">为什么是它，不是别的</h2>
+          <p className="landing-section-sub">和普通相册、笔记软件相比，最不一样的地方</p>
+          <div className="landing-highlights">
+            {HIGHLIGHTS.map((h) => (
+              <div className="landing-highlight-card" key={h.title}>
+                <span className="landing-highlight-icon">{h.icon}</span>
+                <strong>{h.title}</strong>
+                <p>{h.desc}</p>
               </div>
             ))}
           </div>
         </section>
 
-        {/* 为什么选择 */}
+        {/* ====== 谁会用它：人，而不是功能列表 ====== */}
         <section className="landing-section landing-section-tinted">
-          <h2 className="landing-section-title">为什么选择时光机器</h2>
-          <div className="landing-whys">
-            {WHYS.map((w) => (
-              <div className="landing-why-card" key={w.title}>
-                <span className="feature-icon">{w.icon}</span>
-                <strong>{w.title}</strong>
-                <p>{w.desc}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* 面向对象 */}
-        <section className="landing-section">
-          <h2 className="landing-section-title">谁在使用</h2>
+          <h2 className="landing-section-title">谁在用</h2>
           <div className="landing-audiences">
             {AUDIENCES.map((a) => (
               <div className="landing-audience-card" key={a.title}>
-                <div className="icon-badge icon-badge-sm" style={{ background: `${a.color}1a`, color: a.color }}>{a.icon}</div>
+                <span className="landing-audience-icon">{a.icon}</span>
                 <strong>{a.title}</strong>
                 <p>{a.desc}</p>
               </div>
@@ -147,20 +206,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* 使用场景 */}
-        <section className="landing-section landing-section-tinted">
-          <h2 className="landing-section-title">使用场景</h2>
-          <div className="landing-features">
-            {SCENARIOS.map((s) => (
-              <div className="landing-feature-item" key={s.title}>
-                <div className="icon-badge icon-badge-sm" style={{ background: `${s.color}1a`, color: s.color }}>{s.icon}</div>
-                <div><strong>{s.title}</strong><p>{s.desc}</p></div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* 定价 */}
+        {/* ====== 定价 ====== */}
         <section className="landing-section">
           <h2 className="landing-section-title">选择你的方案</h2>
           <div className="landing-plans">
@@ -174,7 +220,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* FAQ */}
+        {/* ====== FAQ ====== */}
         <section className="landing-section landing-section-tinted">
           <h2 className="landing-section-title">常见问题</h2>
           <div className="landing-faq">
@@ -187,7 +233,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* CTA */}
+        {/* ====== CTA ====== */}
         <section className="landing-cta-section">
           <div className="landing-cta-inner">
             <h2>开始记录你的时光</h2>
@@ -197,7 +243,6 @@ export default function LandingPage() {
         </section>
       </main>
 
-      {/* Footer */}
       <footer className="landing-footer">
         <div className="landing-footer-inner">
           <div className="landing-footer-brand">
