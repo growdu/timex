@@ -19,6 +19,26 @@
 - **SQL 迁移运行器**：schema 增量演进 + 启动自动应用。
 - **文档与博客** (`DocsPage` / `BlogPage`)：12 节使用手册、3 个真实故事、对比表、FAQ；博客含 4 篇文章。
 
+### 测试 & UI 增强
+- **Pages 单测一次性补齐 6 个**：DashboardPage（100%）、LinesPage（98.43%）、MemoirPage（98.28%）、PeoplePage（97.67%）、SpacePage（95.38%）、TimelinePage（89.47%），合计 **60 个测试 100% 通过 / 平均覆盖 96%**
+- 新增共享测试夹具 `frontend/src/pages/__fixtures__/`（data + layout），所有 Pages 测试通过真实 `createApiAdapter` 注入数据，**不 mock 业务逻辑**
+- **修复 fixture 形态 bug**：`sampleEvents` 三个事件的 `people` 字段从字符串名数组改成 Person 对象数组（对齐后端 TypeORM ManyToMany 真实返回形态）
+- **重写 LoginPage**：补全 brand 栏（标题、口号、3 个体验账号按钮），placeholder 改 `Enter password`，默认填 `demo@timex.com / demo123`，错误信息来自服务端 message；测试 9/9 绿
+- **重写 RegisterPage**：补全 brand 栏 + 3 个 feature 列表（试用授权 / 数据隔离 / 多设备同步），placeholder 改 `设置登录密码 / 再次输入密码 / 想让朋友怎么称呼你`，注册成功跳 `/timeline`，测试 10/10 绿
+- **改写 FabStack 测试**：与当前 4 项菜单组件形态对齐（onAddEntity 触发），7/7 绿
+
+### 校验
+- 前端 vitest：**19/19 files / 264/264 tests 全绿**
+- 前端整体覆盖：**48.10% / 74.47% branch / 67.29% funcs**
+- 前端 eslint：**0 errors**（4 warnings 均为 no-unused-vars，分批清理）
+- 前端 build：✓（gzip 165 KB，含 leaflet + d3）
+- 后端 jest：234/234 全绿；tsc 0 错误
+- 后端 eslint 在 ESLint 9 + typescript-eslint v8 下 plugin namespace resolve 失败（**pre-existing**，与本次改动无关；CI lint 阶段会 warn 但 typecheck/build 仍作为唯一真值）
+
+### 文档
+- `docs/testing.md` 重写：补齐新 Pages 覆盖率快照、Mock 约定新增"前端 Pages 组件测试"小节、反向断言技巧、已知 warning 表加后端 eslint 现象说明
+
+
 ### 体验账号
 | 账号 | 密码 | 角色 | 故事 |
 |------|------|------|------|
