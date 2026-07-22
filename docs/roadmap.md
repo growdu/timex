@@ -45,8 +45,8 @@
 | `docs/roadmap.md` 路线图 | ✓ |
 | `docs/changelog.md` 变更日志 | ✓ |
 | `docs/health-check.md` 体检脚本说明 | ✓ |
-| VitePress 站点构建 | ⬜ |
-| `deploy-docs.yml` 自动部署文档 | 🚧（pandoc 兜底可用，VitePress 待起步） |
+| **VitePress 站点构建** | ✓ |
+| `deploy-docs.yml` 自动部署文档 | ✓ |
 
 ## CI/CD（本轮）
 
@@ -64,7 +64,7 @@
 | Pages cancel-in-progress | ✓ |
 | README 加徽章 / 环境变量 / 部署章节 | ✓ |
 | 聚合 `health-check` job（cron + PR） | ✓ |
-| VitePress 文档自动部署 | 🚧 |
+| VitePress 文档自动部署 | ✓ |
 
 ## 下一轮候选
 

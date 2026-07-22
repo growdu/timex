@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "docs/**"
+      - ".github/workflows/deploy-docs.yml"
   workflow_dispatch:
 
 permissions:
@@ -32,33 +33,16 @@ jobs:
 
       - name: Install docs dependencies
         working-directory: docs
-        run: |
-          if [ -f package.json ]; then
-            npm ci
-          else
-            echo "No docs/package.json — building static index"
-          fi
+        run: npm ci
 
-      - name: Build docs site
+      - name: Build docs site (VitePress)
         working-directory: docs
-        run: |
-          if [ -d .vitepress ]; then
-            npx vitepress build
-          else
-            mkdir -p _site
-            for f in *.md; do
-              [ -f "$f" ] || continue
-              name="${f%.md}.html"
-              pandoc "$f" -o "_site/$name" --standalone --metadata title="$f" 2>/dev/null || \
-                cp "$f" "_site/$name"
-            done
-            cp README.md _site/index.html || true
-          fi
+        run: npx vitepress build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: docs/_site
+          path: docs/.vitepress/dist
 
   deploy:
     environment:

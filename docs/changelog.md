@@ -37,6 +37,15 @@
 
 ### 文档
 - `docs/testing.md` 重写：补齐新 Pages 覆盖率快照、Mock 约定新增"前端 Pages 组件测试"小节、反向断言技巧、已知 warning 表加后端 eslint 现象说明
+### VitePress 站点启动
+- `docs/package.json`：引入 vitepress ^1.6.3
+- `docs/.vitepress/config.mjs`：建站点 nav + sidebar + 本地搜索，srcExclude plans/README
+- `docs/index.md`：VitePress 首页（hero + features + 阅读顺序表）
+- `docs/README.md` 顶部加一句"已迁到 VitePress"指针，保留为开发参考
+- `.github/workflows/deploy-docs.yml`：简化路径，直接跑 `npx vitepress build`，上传 `docs/.vitepress/dist`，干掉 pandoc 兜底
+- `.gitignore`：加 `docs/_site/` / `docs/.vitepress/dist/` / `docs/.vitepress/cache/`
+- 本地构建：18 个 md → 18 个 html（包括 404.html），build ~6s
+- roadmap：VitePress 三处状态 ⬜/🚧 → ✓
 
 
 ### 体验账号

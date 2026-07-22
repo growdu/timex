@@ -32,3 +32,8 @@ coverage/
 # Tooling runtime data
 .playwright-mcp/
 .remember/
+
+# VitePress build output
+docs/_site/
+docs/.vitepress/dist/
+docs/.vitepress/cache/
