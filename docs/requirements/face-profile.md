@@ -38,6 +38,17 @@
 - **粘性**：找到越多过去的"自己 / 朋友"，用户越难迁移数据
 - **可控成本**：可走「云优先 + 本地 InsightFace fallback」，用户量大时降级本地，避免云成本爆炸
 
+### 1.5 范围澄清（2026-10-12 用户决策）
+
+本期 v1 **仅做单 self 档案**，每个登录用户对应一个人脸档案；不为 people 实体建立 face profile。
+理由：用户首要诉求是"找回过去的自己"，先把 self 做扎实。person face profile 留待 v1.x 扩展。
+由此带来的简化：
+
+- 不需要 `people.is_self` 列、不需要"懒创建 self person"逻辑
+- 不需要 PersonPage 新增 Tab
+- 不需要 PersonsList 路径
+- 数据表使用 `user_face_embeddings`（直接挂 user_id），不再走 person 维度
+
 ---
 
 ## 2. 目标与成功标准
@@ -72,29 +83,26 @@
 ### 3.1 典型用户（沿用 product.md §3.2）
 
 - **画像 A — 持续记录型**：用户 A（demo）已经把 6 年素材全量导入，希望快速"看自己的过去"
-- **画像 B — 阶段整理型**：用户 B（maker 周屿）已经积累 5 年创业素材，希望"找我和每一位合伙人的合影"
+- **画像 B — 阶段整理型**：用户 B（maker 周屿）已经积累 5 年创业素材，希望"找到自己出现的所有照片"
 - **画像 C — 情感沉淀型**：用户 C（family 沈棠）希望"我和孩子他爸的这些年"自动成档
 
 ### 3.2 核心场景
 
-#### 场景 S1 — self profile（自己）
+#### 场景 S1 — 建立我的画像
 
 1. 用户首次打开 `/faces`
-2. 系统检测到当前 user 没有 `is_self=true` 的 person，自动创建 self person（懒创建）
-3. UI 展示「我的画像」面板，引导用户上传 N 张本人照片作为参考（推荐 3-5 张）
-4. 上传后系统入队 `face-profile-build` AI job，每个参考照片抽出 512-d embedding，写入 `person_face_embeddings`
-5. job 完成后用户回到 `/faces` 主面板，点击「找我的照片」
-6. 系统对当前 user 所有 `moment_faces` 做 ANN 检索（top-K），按相似度阈值过滤
-7. 结果以三 Tab 视图呈现：时间线（按 taken_at）/ 人物聚类（自己 + 同框其他 person）/ 地点地图（按 place_id 聚合）
+2. 系统检测到当前 user 没有任何 `user_face_embeddings` 行；显示 onboarding 面板
+3. UI 引导用户上传 1-N 张本人照片作为参考（推荐 3-5 张）
+4. 上传后系统入队 `face-embed` AI job，每张参考照片抽出 512-d embedding，写入 `user_face_embeddings`
+5. job 完成后 UI 出现「找我的照片」主按钮
 
-#### 场景 S2 — person face profile（他人）
+#### 场景 S2 — 找我的照片
 
-1. 用户打开某 `PersonPage`（id=X）
-2. 新增 Tab「TA 的照片」显示该 person 的 face profile 状态（未建立 / 有 N 张参考 / 已启用）
-3. 用户上传一张该人照片作为参考，系统入队 `face-profile-build` job
-4. job 完成后 UI 出现"开始匹配"按钮
-5. 用户点击 → 后端拿该 person 的 face profile embeddings 对当前 user 的 `moment_faces` 做 ANN 检索
-6. 结果展示命中 moment 列表（与 self 视图风格一致，点击进 Moment 详情）
+1. 用户点击「找我的照片」
+2. 后端从 `user_face_embeddings` 拿 query embedding，对当前 user 的所有 `moment_faces` 做 ANN 检索
+3. 结果按相似度阈值过滤 + topK 截断
+4. 返回命中 moment 列表
+5. 前端三 Tab 视图呈现：时间线（按 taken_at 倒序）/ 人物（命中 moment 的 event_people 聚合）/ 地点（命中 moment 的 place 聚合）
 
 #### 场景 S3 — 历史照片回填
 
@@ -107,8 +115,7 @@
 ### 3.3 跨场景规则（隐私与边界）
 
 - 用户**只能检索自己的素材**，跨用户隔离，由 Service 层强制 `userId` 过滤
-- `is_self=true` 的 person **只允许当前 user 有一个**（DB 唯一约束 `UNIQUE(user_id, is_self)` 部分索引）
-- 一个 person **只能被其拥有 user 操作**，无法让别人给自己 person 建档
+- 一个 user **只对应一套 self face profile**（不存在多档案 management）
 - 已删除 moment 的 `moment_faces` 由 FK `ON DELETE CASCADE` 自动清理
 - face profile embedding **不外传**给前端（保持向量），只返回 top-K 命中与相似度
 
@@ -118,20 +125,21 @@
 
 ### 4.1 v1 必做
 
-- [ ] DB migration：`person.is_self` 列 + `person_face_embeddings` 表 + `moment_faces` 表 + pgvector 扩展
-- [ ] 后端 `face` 模块：`FaceService`（CRUD + 相似度搜索）、`FaceController`、`FaceProvider` 抽象（cloud + local）
+- [ ] DB migration：`user_face_embeddings` 表 + `moment_faces` 表 + pgvector 扩展
+- [ ] 后端 `face` 模块：`FaceService`（CRUD self profile + 相似度搜索）、`FaceController`、`FaceProvider` 抽象（cloud + local + mock）
 - [ ] 云端 `face-embed` provider（HTTP，OpenAI 风格抽象）：用户可用环境变量切换实际云
 - [ ] 本地 `face-embed` provider（HTTP 客户端 + InsightFace sidecar 或 mock）
-- [ ] AI job `kind: 'face-embed' | 'face-match' | 'face-extract'` 接入 `AiService` 异步框架（复用 ai_jobs 表）
-- [ ] API：`/api/faces/profiles`（CRUD）/ `/api/faces/profiles/:id/photos`（添加参考图）/ `/api/faces/search`（按 person 查询）/ `/api/faces/backfill`（批量提取）
-- [ ] 前端 `/faces` 总览页：`SelfProfileCard` + `PersonsList` + 三 Tab 结果视图（Timeline / Persons / Places）
-- [ ] 前端 `PersonPage` 新增 Tab：`TA 的照片`（仅 photo 类 moment 有意义）
-- [ ] 前端 `MomentDetail` 增补"提取人脸"按钮 + 提取后状态展示
+- [ ] AI job `kind: 'face-embed' | 'face-extract'` 接入 `AiService` 异步框架（复用 ai_jobs 表）
+- [ ] API：`POST /api/faces/me/references`（添加参考图）/ `GET /api/faces/me`（查询 self profile）/ `POST /api/faces/search`（检索）/ `POST /api/faces/backfill`（批量提取）/ `POST /api/faces/moments/:id/extract`（单张提取）
+- [ ] 前端 `/faces` 总览页：单 self profile + 三 Tab 结果视图（Timeline / People / Places）
+- [ ] 前端 Moment 卡增补"提取人脸"按钮 + 提取后状态展示
 - [ ] 多租户隔离：所有 Repository / Service 强制 `userId` 过滤（与既有架构同型）
 - [ ] 单元 + 集成测试：与既有测试栈同型（Jest + supertest）
 
 ### 4.2 v1 不做（推迟）
 
+- ⏸ 多档案管理（一个 user 多套 self profile）：超出范围
+- ⏸ 为 person 实体建立 face profile：v1.x 扩展
 - ⏸ 自动触发（上传即处理）：v1.1
 - ⏸ 视频人脸识别：v1.1
 - ⏸ 跨用户合影提醒：v2.0
@@ -158,15 +166,15 @@
 
 | 用例 | 期望 |
 |---|---|
-| US-001 首次进入 `/faces` | 自动创建 self person（懒创建），无需手动操作 |
-| US-002 上传本人 3 张参考图 | 3 个 AI job 全部 succeeded，`person_face_embeddings` 写入 3 行 |
+| US-001 首次进入 `/faces` | 无 self profile 时显示 onboarding 面板，无需创建 person |
+| US-002 上传本人 3 张参考图 | 3 个 AI job 全部 succeeded，`user_face_embeddings` 写入 3 行 |
 | US-003 点"找我的照片" | 返回本人出现的所有 moment，按时间线 Tab 显示至少 N 张（N>0） |
 | US-004 切换到"人物" Tab | 显示与本人同框的其他 person 聚类（基于 `event_people` 关联），点击下钻过滤时间线 |
 | US-005 切换到"地点" Tab | 在地图上显示与本人有关的地点聚合 marker |
-| US-006 给 friend person 传 1 张参考图 | person_face_embeddings +1，可搜索该 friend 出现过的 moment |
-| US-007 点击 backfill | 已存在的 photos 数量 X，全部处理完，进度条 100% |
-| US-008 删除 moment | `moment_faces` 自动级联删除 |
-| US-009 跨用户访问 | 401 / 403 / 404（不允许看到别 user 的 face profile 数据） |
+| US-006 点击 backfill | 已存在的 photos 数量 X，全部处理完，进度条 100% |
+| US-007 删除 moment | `moment_faces` 自动级联删除 |
+| US-008 跨用户访问 | 401 / 403 / 404（不允许看到别 user 的 face profile 数据） |
+| US-009 上传重复参考图 | 抛 409 conflict（同一 userId 下 sourceUrl 重复检测） |
 
 ### 5.2 非功能验收
 
@@ -208,20 +216,18 @@
 按用户偏好（commit + 测试），本功能：
 
 - 每个子模块完成 → 单元测试 + 集成测试全绿 → commit
-- 提交粒度建议（参见设计文档 §10 任务拆分）：
+- 提交粒度建议（参见计划文档 `docs/superpowers/plans/2026-10-12-face-profile.md` 任务拆分）：
   1. migration（加表 + pgvector） + 单测
   2. face entity / repository + 单测
-  3. face service（CRUD） + 单测
-  4. face provider 接口 + mock provider + 单测
-  5. cloud/local provider + 单测
+  3. face provider 接口 + mock provider + 单测
+  4. cloud/local provider + 单测
+  5. face service（self CRUD + 检索） + 单测
   6. face controller + 集成测试
-  7. self 懒创建 + 集成测试
-  8. ai job 接入（face-embed/face-extract/face-match） + 单测
-  9. 检索接口（pgvector） + 集成测试
-  10. batch backfill + 集成测试
-  11. 前端 /faces 总览页（自适应切片 1-2 commit）
-  12. 前端 PersonPage Tab（1 commit）
-  13. 前端 Moment Detail 按钮（1 commit）
+  7. ai job 接入（face-embed/face-extract） + 单测
+  8. 检索接口（pgvector） + 集成测试
+  9. batch backfill + 集成测试
+  10. 前端 /faces 总览页（1-2 commit）
+  11. 前端 Moment Detail 按钮（1 commit）
 
 每 commit 含：
 - 实现代码
@@ -249,10 +255,9 @@
 
 | 术语 | 定义 |
 |---|---|
-| face profile | 某 person 的多张参考照片 + 各自的 512-d embedding |
-| face reference | 一张参考照片 + 检出的人脸 bbox + embedding |
-| moment face | moment 中检测出的一个具体人脸（embedding + bbox + 推测 person_id） |
-| is_self | person 表 boolean 列，标记该 person 为当前 user 的"自己" |
+| self face profile | 某 user 的多张本人参考照片 + 各自的 512-d embedding（直接挂 user_id，无 person 中间层） |
+| face reference | 一张本人参考照片 + 检出的人脸 bbox + embedding（行：`user_face_embeddings`） |
+| moment face | moment 中检测出的一个具体人脸（embedding + bbox，行：`moment_faces`） |
 | ANN | Approximate Nearest Neighbor，本次用 pgvector ivfflat |
 
 ### 9.2 参考

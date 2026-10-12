@@ -119,18 +119,10 @@ FaceService.attachReference(userId, profileId, photoUrl)
 -- pgvector 扩展（PostgreSQL 16 + pgvector 0.5+）
 CREATE EXTENSION IF NOT EXISTS vector;
 
--- 1. people.is_self 标记
-ALTER TABLE people ADD COLUMN is_self BOOLEAN NOT NULL DEFAULT FALSE;
-
--- 每个 user 仅允许一条 is_self=true 的 person（partial unique index）
-CREATE UNIQUE INDEX uq_people_user_self
-  ON people (user_id) WHERE is_self = TRUE;
-
--- 2. 人脸参考照片与 embedding（person_face_embeddings）
-CREATE TABLE person_face_embeddings (
-  id            uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+-- 1. 单 self 人脸参考照片（user_face_embeddings）—— 一个 user 一套档案
+CREATE TABLE user_face_embeddings (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id       uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  person_id     uuid NOT NULL REFERENCES people(id) ON DELETE CASCADE,
   source_url    TEXT NOT NULL,                            -- 原图 URL（OSS）
   thumbnail_url TEXT,                                     -- 缩略图（人脸 cropping 或原图压缩）
   bbox          jsonb,                                    -- {x,y,w,h} 0..1 归一化
@@ -138,15 +130,17 @@ CREATE TABLE person_face_embeddings (
   provider      VARCHAR(32) NOT NULL DEFAULT 'mock',      -- cloud | local | mock
   model         VARCHAR(64),                              -- e.g. 'buffalo_l' / 'facerec-v1'
   is_enabled    BOOLEAN NOT NULL DEFAULT TRUE,            -- 启用/禁用某条参考
-  created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  -- 同一用户同一张原图去重（防止重复入队 + 节省存储）
+  UNIQUE (user_id, source_url)
 );
-CREATE INDEX idx_pfe_person_enabled ON person_face_embeddings (person_id, is_enabled);
--- 向量 ANN 索引（profile 检索时按 person 聚合）
-CREATE INDEX idx_pfe_embedding ON person_face_embeddings USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+CREATE INDEX idx_ufe_user_enabled ON user_face_embeddings (user_id, is_enabled);
+-- 向量 ANN 索引（核心 profile 索引）
+CREATE INDEX idx_ufe_embedding ON user_face_embeddings USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
 
--- 3. moment 中的人脸（moment_faces）
+-- 2. moment 中的人脸（moment_faces）
 CREATE TABLE moment_faces (
-  id            uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id       uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   moment_id     uuid NOT NULL REFERENCES moments(id) ON DELETE CASCADE,
   source_url    TEXT NOT NULL,
@@ -162,7 +156,7 @@ CREATE INDEX idx_mf_user_moment ON moment_faces (user_id, moment_id);
 -- 向量 ANN 索引（核心检索索引）
 CREATE INDEX idx_mf_embedding ON moment_faces USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
 
--- 4. ai_jobs.kind 扩展支持 face-* 类型（无需 SQL 变更，TS enum 扩展即可）
+-- 3. ai_jobs.kind 扩展支持 face-* 类型（无需 SQL 变更，TS enum 扩展即可）
 ```
 
 > **注意**：`ivfflat` 在小表（< 1000 行）上不索引；首版用 ≥ 1000 行后建索引更稳。CI / 开发环境可延迟建索引；生产强制要求。
@@ -170,20 +164,21 @@ CREATE INDEX idx_mf_embedding ON moment_faces USING ivfflat (embedding vector_co
 ### 3.2 ER 关系（增量）
 
 ```
-users ─┬─ people (新增 is_self)
-       │     │
-       │     └─ person_face_embeddings ─┐
-       │                                │
-       ├─ moments ── moment_faces ───────┤  ← 向量 ANN 检索
-       │                                │
-       └─ ai_jobs (复用, kind 扩展) ─────┘
+users ─┬─ user_face_embeddings (单 self 档案直接挂 user_id)
+       │
+       ├─ moments ── moment_faces ──── 向量 ANN 检索
+       │
+       └─ ai_jobs (复用, kind 扩展)
 ```
+
+> people 表在本期不做任何变更，不引入 is_self 列。检索结果中的"人物聚类"仍然复用既有 `event_people` 关联（按 `event_id` → `person_id` 派生），不依赖 face。
 
 ### 3.3 多租户隔离
 
 - 所有表带 `user_id`，service 层强制 `find({ where: { userId } })`
-- `is_self=true` 的 person **不允许跨 user 查看或修改**
-- moment_face/person_face_embedding 的 userId 取自 FK 链（moment.userId / person.userId），由 Service 二次校验
+- 一个 user **仅一套 self 档案**（`user_face_embeddings.user_id` 唯一对应 user，不去重数量，**允许同一 user 多张参考图**）
+- moment_face/user_face_embedding 的 userId 直接来自列，Service 二次校验
+- `user_face_embeddings.(user_id, source_url)` 唯一约束：防止用户重复上传同一 OSS URL
 
 ---
 
@@ -200,7 +195,7 @@ backend/src/face/
 ├── face.controller.spec.ts                  # 集成测试骨架
 ├── face-integration.spec.ts                # 端到端 supertest
 ├── entities/
-│   ├── person-face-embedding.entity.ts     # @Entity('person_face_embeddings')
+│   ├── user-face-embedding.entity.ts       # @Entity('user_face_embeddings') — 单 self 档案
 │   └── moment-face.entity.ts               # @Entity('moment_faces')
 ├── dto/
 │   ├── search-faces.dto.ts
@@ -227,21 +222,21 @@ backend/src/face/
 ```typescript
 @Injectable()
 export class FaceService {
-  // === self profile ===
-  ensureSelfProfile(userId: string): Promise<Person>;
-  
-  // === person face profile ===
-  listProfiles(userId: string, opts?: { personId?: string }): Promise<ProfileSummary[]>;
-  addReference(userId: string, personId: string, imageUrl: string, bboxHint?: BBox): Promise<RefJobAck>;
+  // === self profile（user-level，无 person 中间层） ===
+  getMyProfile(userId: string): Promise<ProfileSummary>;
+  addReference(userId: string, imageUrl: string, bboxHint?: BBox): Promise<RefJobAck>;
   removeReference(userId: string, refId: string): Promise<void>;
   enableReference(userId: string, refId: string, enabled: boolean): Promise<void>;
 
   // === 检索 ===
-  searchByPerson(userId: string, personId: string, opts: { threshold: number; topK: number }): Promise<Hit[]>;
-  
+  searchMine(userId: string, opts: { threshold?: number; topK?: number }): Promise<Hit[]>;
+
+  // === 单张提取 ===
+  enqueueExtractFaces(userId: string, momentId: string): Promise<{ jobId: string }>;
+
   // === 回填 ===
-  startBackfill(userId: string, opts?: { kind?: 'photo'; limit?: number }): Promise<BackfillJobAck>;
-  getBackfillStatus(userId: string): Promise<BackfillStatus>;
+  startBackfill(userId: string): Promise<BackfillStatus>;
+  getBackfillStatus(): BackfillStatus;     // 进程内状态（不需要 userId）
 }
 ```
 
@@ -251,17 +246,14 @@ export class FaceService {
 
 | Method | Path | 说明 |
 |---|---|---|
-| GET | `/api/faces/profiles` | 列出所有 person 的 face profile 概览 |
-| GET | `/api/faces/profiles/self` | 取 self profile（无则建） |
-| GET | `/api/faces/profiles/:personId` | 单个 profile 详情 + 启用参考图列表 |
-| POST | `/api/faces/profiles/:personId/references/presign` | 申请上传签名（同 UploadService） |
-| POST | `/api/faces/profiles/:personId/references` | body: `{ key, bbox? }` 入队 face-embed job |
-| DELETE | `/api/faces/references/:refId` | 删参考 |
-| PATCH | `/api/faces/references/:refId` | 启/停参考 |
-| POST | `/api/faces/search` | body: `{ personId, threshold?, topK? }` → hits |
-| POST | `/api/faces/backfill` | 启动回填 → `{ jobId }` |
-| GET | `/api/faces/backfill/status` | 进度 |
-| POST | `/api/faces/jobs/:jobId/retry` | 复用通用 AI job retry |
+| GET | `/api/faces/me` | 取本用户 self profile 概览（含参考图计数） |
+| POST | `/api/faces/me/references` | body: `{ imageUrl, bboxHint? }` 入队 face-embed job |
+| DELETE | `/api/faces/me/references/:refId` | 删参考 |
+| PATCH | `/api/faces/me/references/:refId` | body: `{ enabled: bool }` 启/停参考 |
+| POST | `/api/faces/search` | body: `{ threshold?, topK? }` → hits |
+| POST | `/api/faces/moments/:momentId/extract` | 给单张 moment 提取人脸（同步入队） |
+| POST | `/api/faces/backfill` | 启动一次性回填 |
+| GET | `/api/faces/backfill/status` | 进程级回填进度 |
 
 所有 endpoint 走 `SessionAuthGuard` + `@CurrentUser()` 派生 userId。
 
@@ -367,17 +359,17 @@ export type AiJobKind =
   | 'memoir-summary'
   | 'chapter-summary'
   | 'event-summary'
-  | 'face-embed'         // 入参：imageUrl + bboxHint?；写回 person_face_embeddings / moment_faces
+  | 'face-embed'         // 入参：imageUrl + bboxHint?；写回 user_face_embeddings / moment_faces
   | 'face-extract'       // 入参：momentId；调用 detectAndEmbed 写回 moment_faces
   | 'face-match';        // 可选：离线标定某 moment 含哪些 person（v1.x 备用）
 
-// targetType 扩展（face-* job 不能复用 'moment' 域，target 指向 person_face_embeddings.id）
+// targetType 扩展（face-* job 不能复用 'moment' 域，target 指向 user_face_embeddings.id）
 export type AiJobTargetType =
   | 'moment'
   | 'memoir'
   | 'chapter'
   | 'event'
-  | 'face_reference'     // face-embed 的 target：person_face_embeddings.id
+  | 'face_reference'     // face-embed 的 target：user_face_embeddings.id
   | 'face_match';        // face-extract 的 target：moment_id（语义上与 moment 重叠；保留独立枚举以备未来差异）
 ```
 
@@ -390,7 +382,7 @@ case 'face-embed': {
   // 1. 读 promptInput 拿 imageUrl, bboxHint
   // 2. faceProvider.detectAndEmbed → embeddings[]
   // 3. 按 bboxHint 或面积取最大脸
-  // 4. 写入 person_face_embeddings（targetType='face_reference', targetId=refId）
+  // 4. 写入 user_face_embeddings（targetType='face_reference', targetId=refId）
   break;
 }
 case 'face-extract': {
@@ -407,8 +399,8 @@ case 'face-match': {
 
 #### 4.5.3 入队入口
 
-- `FaceService.addReference` 内部写 ref 行 → 入队 `face-embed`
-- `FaceService.startBackfill` 内部扫 moments，循环入队 `face-extract`（一批一批，限速 5/批/s）
+- `FaceService.addReference(userId, imageUrl)` 内部在 `user_face_embeddings` 写 ref 行（embedding 暂 placeholder） → 入队 `face-embed`
+- `FaceService.startBackfill(userId)` 内部扫本用户 photos，循环入队 `face-extract`（一批一批，限速 5/批/s）
 - 上传 moment 时的"自动入队"功能本期**关闭**，仅手动触发
 
 ### 4.6 VectorSearchService
@@ -478,59 +470,43 @@ SELECT moment_id, distance FROM hits;
 
 ```
 ┌────────────────────────────────────────────────────┐
-│  面孔中心                            [+ 新建档案]   │
+│  面孔中心                                           │
 ├────────────────────────────────────────────────────┤
-│  我的画像 (self)                                   │
-│  ┌──────────┐  已建立 / 3 张参考 / 200 命中         │
+│  我的画像 (self)                                    │
+│  ┌──────────┐  已建立 / 3 张参考 / 200 命中          │
 │  │ self 头像 │  [ 添加参考 ]  [ 找我的照片 → ]     │
 │  └──────────┘                                       │
 ├────────────────────────────────────────────────────┤
-│  所有人物（共 N 个，已建档 M 个）                   │
-│  ┌────┐ ┌────┐ ┌────┐ ┌────┐ ┌────┐  ……           │
-│  │李某│ │王某│ │小雨│ │ 小宇│ │ + │               │
-│  │✓档案│ │   │ │✓档案│ │   │ │   │              │
-│  └────┘ └────┘ └────┘ └────┘ └────┘              │
+│  历史回填                                           │
+│  [一次性回填所有照片]   已处理 124/500               │
 └────────────────────────────────────────────────────┘
 ```
 
-点"找我的照片"或某 person 进入 **结果三 Tab**：
+主页 = self profile（无 person 入口）。
+
+点"找我的照片"进入 **结果三 Tab**：
 
 ```
 ┌────────────────────────────────────────────────────┐
-│ ← 返回    李小宇 · TA 的照片           [⚙ 阈值]   │
+│ ← 返回    我的照片                  [⚙ 阈值]      │
 ├────────────────────────────────────────────────────┤
 │ [时间线][人物聚类][地点地图]                        │
 ├────────────────────────────────────────────────────┤
 │ ── 2024 ──                                          │
 │  📷 [缩略图] 你 + 李小宇    2024-08-12 三亚        │
-│  📷 [缩略图] 你 + 李小宇    2024-08-13 三亚        │
+│  📷 [缩略图] 你 + 小雨      2024-08-13 三亚        │
 │ ── 2023 ──                                          │
-│  📷 [缩略图] 你 + 李小宇    2023-12-24 北京        │
+│  📷 [缩略图] 你 + 王老师    2023-12-24 北京        │
 │                                                      │
 │  ……                                                  │
 └────────────────────────────────────────────────────┘
 ```
 
-### 5.3 PersonPage Tab
+> 人物 / 地点 Tab 内容**仍然存在**，但不需要 person face profile：
+> - 人物 Tab：根据 hit moment 的 `event_people` 聚合（user 手动关联过 event-people）
+> - 地点 Tab：根据 hit moment 的 `place_id` 聚合（用既有 `<SpaceMap>`）
 
-`PersonPage.jsx` 加 `<Tab>`：
-
-```jsx
-<Tabs>
-  <Tab label="概况">{/* existing */}</Tab>
-  <Tab label="TA 的照片" badge={faceProfileCount}>  
-    <PersonFaceTab personId={person.id} />
-  </Tab>
-  <Tab label="关系">{/* existing */}</Tab>
-</Tabs>
-```
-
-`PersonFaceTab`：
-- 若无 face profile：CTA 上传 1 张参考图
-- 已有：显示命中数 + "看照片"按钮 → 跳 `/faces?personId=X`
-- 已有参考列表（N 张），可启用/停用/删
-
-### 5.4 Moment 详情
+### 5.3 Moment 详情
 
 `EventPage` / Moment 缩略卡 hover 菜单加：
 
@@ -565,24 +541,22 @@ export function groupHitsByPlace(hits, allPlaces) { /* ... */ }
 
 输出与 `apiAdapter.js#createApiAdapter().getEventsByLine` 同模式。
 
-### 5.6 组件
+### 5.5 组件
 
 | 组件 | 路径 |
 |---|---|
 | `<SelfProfileCard />` | `components/SelfProfileCard.jsx` |
-| `<PersonsList />` | `components/PersonsList.jsx` |
 | `<FaceResultTabs />` | `components/FaceResultTabs.jsx` |
 | `<FaceTimelineView />` | `components/FaceTimelineView.jsx` |
-| `<FacePersonCluster />` | `components/FacePersonCluster.jsx` |
+| `<FacePersonCluster />` | `components/FacePersonCluster.jsx`（基于 event_people 派生） |
 | `<FacePlaceMap />` | `components/FacePlaceMap.jsx` |
-| `<PersonFaceTab />` | `components/PersonFaceTab.jsx` |
 | `<ExtractFaceButton />` | `components/ExtractFaceButton.jsx` |
 | `<FaceProfileSetupModal />` | `components/FaceProfileSetupModal.jsx` |
 
-### 5.7 状态
+### 5.6 状态
 
-- Zustand：`useFacesStore`，当前选中 person、当前阈值、当前 Tab
-- TanStack Query：5 个主 query（profile list / self / search / backfill status / job status）
+- Zustand：`useFacesStore`，当前阈值、当前 Tab、查询参数
+- TanStack Query：3 个主 query（me / search / backfill status）
 
 ---
 
@@ -634,12 +608,12 @@ face-service:
 
 | 场景 | 行为 |
 |---|---|
-| Cloud provider 不可达 | `cloud.detectAndEmbed` throw → retry once → 仍失败则 job `failed`，error 写入 ai_jobs.error |
+| Cloud provider 不可达 | `cloud.detectAndEmbed` throw → retry once → 仍失败则 job `failed`，error 写入 ai_jobs.error（fallback mock） |
 | Local provider fallback | 启动可读 `FACE_PROVIDER`，fallback 仅在调用失败时生效 |
 | pgvector 查询失败 | service 兜底 throw → controller 返回 503 |
 | 用户上传不合法（mime 非 photo） | 400 |
 | 跨 user 访问 | 404（不暴露存在性） |
-| `is_self=true` 已存在再尝试创建 | 409 conflict |
+| 同一 user 重复上传同一 sourceUrl | 409 conflict（`uq_user_face_source` 唯一约束） |
 | 已删除 moment | moment_faces ON DELETE CASCADE，检索结果自动剔除 |
 
 ---
@@ -650,10 +624,9 @@ face-service:
 |---|---|
 | 鉴权 | 全 endpoint `SessionAuthGuard` + `@CurrentUser()` |
 | userId 隔离 | 所有 Repository / Query 强制 where userId |
-| 唯一自档案 | DB partial unique index `uq_people_user_self` |
 | Embedding 外发 | 仅返回 top-K hit + distance，不返回 embedding 本身 |
 | 上传权限 | 复用 upload service 单签（key 前缀 `uploads/{userId}/face/`） |
-| 删除 | person 删 → person_face_embeddings 级联；moment 删 → moment_faces 级联 |
+| 删除 | user 删 → user_face_embeddings 级联；moment 删 → moment_faces 级联 |
 | 日志 | 不打印 imageUrl（可能含敏感 URL）除非 verbose 模式 |
 
 ---
@@ -665,7 +638,7 @@ face-service:
 | `face-embed` 单张参考图（cloud） | P95 ≤ 2.0s |
 | `face-embed` 单张参考图（local buffalo_l / GPU） | P95 ≤ 1.0s |
 | `face-extract` 单张（本地跑） | P50 ≤ 1.5s / P95 ≤ 3.0s |
-| `searchByPerson`（10k moment_faces / 3 refs） | P95 ≤ 100ms |
+| `searchMine`（10k moment_faces / 3 refs） | P95 ≤ 100ms |
 | backfill 吞吐 | ≥ 2 photos / s（cloud）/ 5 / s（local） |
 
 实测在 mock provider（CI 上）单 job ≤ 200ms。
@@ -680,9 +653,9 @@ face-service:
 |---|---|---|
 | Provider | mock 确定性 / 接口契约 | `mock.face-provider.spec.ts` |
 | Provider | Cloud HTTP 错误重试 fallback | `cloud.face-provider.spec.ts` |
-| Service | self 懒创建 idempotent | `face.service.spec.ts` |
+| Service | getMyProfile addReference dedupe | `face.service.spec.ts` |
 | Service | addReference 入队 + 关联 | 同上 |
-| Service | searchByPerson 阈值与 topK | 同上 |
+| Service | searchMine 阈值与 topK | 同上 |
 | Service | backfill 限速与幂等 | 同上 |
 | Service | 跨 user 隔离 | 同上 |
 | Search | pgvector SQL 集成（带 testContainer） | `vector-search.integration.spec.ts` |
@@ -709,26 +682,21 @@ face-service:
 ## 11. 实施任务拆分（commit 节奏建议）
 
 > 每个 Task = 1 commit，commit 含实现 + 单测 + 集成测试，全绿
+> 单 self 档案简化版（原 17 task 减少到 11 task）
 
 | # | Task | commit message 前缀 |
 |---|---|---|
-| 1 | migration: pgvector + people.is_self + 两张 embedding 表 + ivfflat 索引 | `feat(db): face profile schema + pgvector` |
-| 2 | face entities + repository | `feat(backend): face entities + repo` |
-| 3 | FaceService CRUD（不含 provider）+ VectorSearchService 基础 | `feat(backend): face service CRUD` |
-| 4 | FaceProvider 接口 + MockProvider | `feat(backend): face provider interface + mock` |
-| 5 | CloudProvider + LocalProvider stub | `feat(backend): face provider cloud + local` |
-| 6 | FaceController + 集成测试 | `feat(backend): face controller endpoints` |
-| 7 | AI job: face-embed / face-extract handler | `feat(ai): face-embed + face-extract jobs` |
-| 8 | self profile 懒创建端点 | `feat(backend): self profile ensure endpoint` |
-| 9 | backfill 端点 + 限速 | `feat(backend): face backfill + ratelimit` |
-| 10 | 前端 api/faces + faceAdapter + faceSelectors | `feat(frontend): face api + adapters` |
-| 11 | 前端 useFaceSearch + useBackfill hooks | `feat(frontend): face search hooks` |
-| 12 | 前端 FacesPage + 自适配组件（SelfProfileCard + PersonsList） | `feat(frontend): /faces overview page` |
-| 13 | 前端 FaceResultTabs + 3 个 view 组件 | `feat(frontend): face result 3-tab views` |
-| 14 | 前端 PersonPage Tab "TA 的照片" | `feat(frontend): person page face tab` |
-| 15 | 前端 Moment "提取人脸" 按钮 | `feat(frontend): moment extract-faces button` |
-| 16 | 端到端 smoke：用户指南段落 | `docs(user-guide): face profile guide` |
-| 17 | docs 收尾：roadmap / changelog / api.md 更新 | `docs: face profile in roadmap + api + changelog` |
+| 1 | migration: pgvector + `user_face_embeddings` + `moment_faces` + ivfflat 索引 | `feat(db): face profile schema + pgvector` |
+| 2 | face entities (UserFaceEmbedding + MomentFace) + repository | `feat(backend): face entities + repo` |
+| 3 | FaceProvider 接口 + MockProvider | `feat(backend): face provider interface + mock` |
+| 4 | CloudProvider + LocalProvider | `feat(backend): face provider cloud + local` |
+| 5 | FaceProviderFactory + FaceModule 装配 | `feat(backend): FaceProviderFactory + FaceModule wiring` |
+| 6 | VectorSearchService（pgvector cosine ANN SQL）| `feat(backend): VectorSearchService` |
+| 7 | FaceService + FaceController (REST + supertest) | `feat(backend): FaceService + FaceController` |
+| 8 | AI job: face-embed / face-extract handler 接入 AiService | `feat(ai): face-embed + face-extract jobs` |
+| 9 | 前端 api/faces + faceAdapter + hooks + FacesPage + FaceResultTabs | `feat(frontend): /faces page + result tabs` |
+| 10 | 前端 Moment "提取人脸" 按钮 + ExtractFaceButton + ExtractFaceModal | `feat(frontend): moment extract-faces button` |
+| 11 | docs 收尾：user-guide / roadmap / api / changelog | `docs: face profile in user-guide + roadmap + api + changelog` |
 
 每个 Task 完成后：
 - `npm run test` 全绿
@@ -740,15 +708,16 @@ face-service:
 
 - 每 Task 完成后跑对应 spec → 任务级别的「完成」
 - 所有 Task 完成后跑：
-  - `npx jest` ≥ 380 单测
-  - `npx jest --testPathPattern=integration` ≥ 14 集成
-  - `npx jest --coverage` 后端 ≥ 78%
-  - 前端 `npm run test:cov` Page 覆盖度涨 ≥ 5%
+  - `npx jest` 单测 + 集成测试新增 ≥ 30 条
+  - `npx jest --coverage` 后端保持 ≥ 75% 或提升
+  - 前端 `npm run test` 全绿
 
 ---
 
 ## 12. 不在本期范围（明确放弃）
 
+- **多档案管理（一个 user 多套 self face profile）**：用户决策，仅做单档案
+- **为 people 实体建立 face profile**：用户决策；person 表不动
 - 多人脸追踪（track id）
 - 视频帧人脸
 - 自动触发（上传即入队）
