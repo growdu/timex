@@ -1,3 +1,5 @@
+export const FACE_CONFIG = 'FACE_CONFIG';
+
 export interface FaceConfig {
   provider: 'cloud' | 'local' | 'mock';
   cloud: { baseUrl: string; apiKey: string; timeoutMs: number };

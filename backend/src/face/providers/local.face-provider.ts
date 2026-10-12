@@ -2,6 +2,7 @@ import { Injectable, Inject } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import type { FaceConfig } from '../../config/face.config';
+import { FACE_CONFIG } from '../../config/face.config';
 import { BBox, FaceEmbedding, FaceProvider } from './face-provider.interface';
 
 interface LocalDetectResponse {
@@ -18,7 +19,7 @@ export class LocalFaceProvider implements FaceProvider {
 
   constructor(
     private http: HttpService,
-    @Inject('FACE_CONFIG') private cfg: FaceConfig,
+    @Inject(FACE_CONFIG) private cfg: FaceConfig,
   ) {}
 
   async detectAndEmbed(imageUrl: string): Promise<FaceEmbedding[]> {
