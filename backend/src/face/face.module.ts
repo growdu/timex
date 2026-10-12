@@ -9,6 +9,7 @@ import { CloudFaceProvider } from './providers/cloud.face-provider';
 import { FaceProviderFactory } from './providers/face-provider.factory';
 import { LocalFaceProvider } from './providers/local.face-provider';
 import { MockFaceProvider } from './providers/mock.face-provider';
+import { VectorSearchService } from './search/vector-search.service';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { MockFaceProvider } from './providers/mock.face-provider';
     CloudFaceProvider,
     LocalFaceProvider,
     FaceProviderFactory,
+    VectorSearchService,
   ],
   exports: [FaceProviderFactory],
 })
