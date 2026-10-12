@@ -38,16 +38,19 @@
 - **粘性**：找到越多过去的"自己 / 朋友"，用户越难迁移数据
 - **可控成本**：可走「云优先 + 本地 InsightFace fallback」，用户量大时降级本地，避免云成本爆炸
 
-### 1.5 范围澄清（2026-10-12 用户决策）
+### 1.5 范围澄清（2026-10-12 用户决策迭代）
 
-本期 v1 **仅做单 self 档案**，每个登录用户对应一个人脸档案；不为 people 实体建立 face profile。
-理由：用户首要诉求是"找回过去的自己"，先把 self 做扎实。person face profile 留待 v1.x 扩展。
-由此带来的简化：
-
-- 不需要 `people.is_self` 列、不需要"懒创建 self person"逻辑
-- 不需要 PersonPage 新增 Tab
-- 不需要 PersonsList 路径
+**v1 简化约定：**
+- 仅做**单 self 档案**：每个登录用户对应一套人脸档案；不为 people 实体建立 face profile
 - 数据表使用 `user_face_embeddings`（直接挂 user_id），不再走 person 维度
+- 不需要 `people.is_self` 列、不需要 PersonPage 新增 Tab、不需要 PersonsList 路径
+- person face profile 留待 v1.x 扩展
+
+**v1 扩展：临时 dump 场景（用户 15:41 追加）**
+- 同时支持**临时上传一批 dump 照片** + 对其做过滤检索（不只是对永久 moments 库）
+- 适用场景：用户临时拷贝一堆照片（手机 dump、相册导出）→ 上传到 `/faces/dumps` → 系统对该 dump 抽取人脸 → 与 self 参考图比对 → 输出去重后 + 按时间线的命中 → 用户可选择保留或清理 dump
+- 与"找我的照片"流程**分离**：dump 检索只针对该 dump，不影响历史 moments
+- 数据模型：`scratch_dumps` + `scratch_dump_items` 两张表（含 `taken_at` / 文件 mtime / face embedding）
 
 ---
 
@@ -85,6 +88,7 @@
 - **画像 A — 持续记录型**：用户 A（demo）已经把 6 年素材全量导入，希望快速"看自己的过去"
 - **画像 B — 阶段整理型**：用户 B（maker 周屿）已经积累 5 年创业素材，希望"找到自己出现的所有照片"
 - **画像 C — 情感沉淀型**：用户 C（family 沈棠）希望"我和孩子他爸的这些年"自动成档
+- **画像 D — 一次性 dump 用户**（新增）：用户 D 临时拷出 5 GB 旧照片或活动方提供的合影集，希望快速从中找到"含自己"的部分
 
 ### 3.2 核心场景
 
@@ -96,7 +100,7 @@
 4. 上传后系统入队 `face-embed` AI job，每张参考照片抽出 512-d embedding，写入 `user_face_embeddings`
 5. job 完成后 UI 出现「找我的照片」主按钮
 
-#### 场景 S2 — 找我的照片
+#### 场景 S2 — 找我的照片（针对永久 moments 库）
 
 1. 用户点击「找我的照片」
 2. 后端从 `user_face_embeddings` 拿 query embedding，对当前 user 的所有 `moment_faces` 做 ANN 检索
@@ -112,12 +116,31 @@
 4. UI 通过 `useJobPolling` 实时显示进度（已处理 / 总数 / 失败数）
 5. job 完成后刷新 `/faces`，所有命中即可查询
 
+#### 场景 S4 — 上传临时 dump 并过滤（新增核心场景）
+
+> 用户原始诉求：「主要目的是从一堆混乱的照片中根据提取好的个人特征筛选出照片」
+
+1. 用户点击 `/faces/dumps/new`，创建一个新 dump（命名 + 可选描述）
+2. UI 引导用户上传 N 张照片（可能数百 ~ 数千张）
+3. 客户端逐张直传 OSS，每张同时 `POST /api/faces/dumps/:id/photos` 入库（创建 `scratch_dump_items` 行 + 入队 `face-extract-scratch` job）
+4. 实时进度条显示「已抽取 X / Y 张」(通过 `useScratchDumpStatus` polling)
+5. 处理完成（或后台继续时）用户上传本人参考图（或用 S1 已建立的 self 档案）
+6. 用户点击「过滤」→ `POST /api/faces/dumps/:id/search { threshold? }` → 后端拿 self embedding，对 dump 内 `scratch_dump_items.embedding` 做 ANN 检索
+7. 结果按时间线呈现：
+   - 排序键：照片 EXIF `taken_at` > 文件 mtime > 上传时间（缺哪注哪，UI 标记）
+   - 三视图：时间线（垂直按时间倒序）/ 同框人物（基于手动关联，初始空）/ 地点（基于 EXIF GPS，先空）
+8. 用户可点击下载 / 分享（v1 简化：导出 JSON 列表 + 单张图片直链）
+9. 完成后用户可选「保留 dump」或「清理 dump」（DELETE `/api/faces/dumps/:id` → cascade 清表）
+
 ### 3.3 跨场景规则（隐私与边界）
 
 - 用户**只能检索自己的素材**，跨用户隔离，由 Service 层强制 `userId` 过滤
 - 一个 user **只对应一套 self face profile**（不存在多档案 management）
+- 一个 user 可有**多个 dump 同时存在**（每个独立标识、独立进度、可独立清理）
 - 已删除 moment 的 `moment_faces` 由 FK `ON DELETE CASCADE` 自动清理
-- face profile embedding **不外传**给前端（保持向量），只返回 top-K 命中与相似度
+- 已删除 dump 的 `scratch_dump_items` 由 FK `ON DELETE CASCADE` 自动清理
+- face profile / dump item embedding **不外传**给前端（保持向量），只返回 top-K 命中与相似度
+- dump 中的图片**不入正式 moments 库**（除非用户明确"提升到正式"的 v1.x 功能）
 
 ---
 
@@ -125,13 +148,16 @@
 
 ### 4.1 v1 必做
 
-- [ ] DB migration：`user_face_embeddings` 表 + `moment_faces` 表 + pgvector 扩展
-- [ ] 后端 `face` 模块：`FaceService`（CRUD self profile + 相似度搜索）、`FaceController`、`FaceProvider` 抽象（cloud + local + mock）
+- [ ] DB migration：pgvector 扩展 + `user_face_embeddings` 表 + `moment_faces` 表 + **`scratch_dumps` 表 + `scratch_dump_items` 表** + ivfflat 索引
+- [ ] 后端 `face` 模块：`FaceService`（self CRUD + 库检索 + backfill）+ **`ScratchDumpService`（dump CRUD + dump 内检索）** + `FaceController` + `FaceProvider` 抽象（cloud + local + mock）
 - [ ] 云端 `face-embed` provider（HTTP，OpenAI 风格抽象）：用户可用环境变量切换实际云
 - [ ] 本地 `face-embed` provider（HTTP 客户端 + InsightFace sidecar 或 mock）
-- [ ] AI job `kind: 'face-embed' | 'face-extract'` 接入 `AiService` 异步框架（复用 ai_jobs 表）
-- [ ] API：`POST /api/faces/me/references`（添加参考图）/ `GET /api/faces/me`（查询 self profile）/ `POST /api/faces/search`（检索）/ `POST /api/faces/backfill`（批量提取）/ `POST /api/faces/moments/:id/extract`（单张提取）
-- [ ] 前端 `/faces` 总览页：单 self profile + 三 Tab 结果视图（Timeline / People / Places）
+- [ ] AI job `kind: 'face-embed' | 'face-extract' | 'face-extract-scratch'` 接入 `AiService` 异步框架（复用 ai_jobs 表）
+- [ ] API：
+  - self：`POST /api/faces/me/references`（参考图）/ `GET /api/faces/me` / `POST /api/faces/search`（库检索）/ `POST /api/faces/backfill`（库回填）/ `POST /api/faces/moments/:id/extract`
+  - **dump（新增）**：`POST /api/faces/dumps` / `GET /api/faces/dumps` / `DELETE /api/faces/dumps/:id` / `POST /api/faces/dumps/:id/photos` / `GET /api/faces/dumps/:id/status` / `POST /api/faces/dumps/:id/search` / `GET /api/faces/dumps/:id/items`
+- [ ] 前端 `/faces` 总览页：单 self profile + 三 Tab 结果视图（Timeline / People / Places）+ 历史回填
+- [ ] 前端 **`/faces/dumps` dump 列表页 + `/faces/dumps/:id` 单 dump 详情页 + 上传 + 进度 + 时间线结果**
 - [ ] 前端 Moment 卡增补"提取人脸"按钮 + 提取后状态展示
 - [ ] 多租户隔离：所有 Repository / Service 强制 `userId` 过滤（与既有架构同型）
 - [ ] 单元 + 集成测试：与既有测试栈同型（Jest + supertest）
@@ -140,6 +166,7 @@
 
 - ⏸ 多档案管理（一个 user 多套 self profile）：超出范围
 - ⏸ 为 person 实体建立 face profile：v1.x 扩展
+- ⏸ dump 中命中照片"提升到正式 moments"：v1.x
 - ⏸ 自动触发（上传即处理）：v1.1
 - ⏸ 视频人脸识别：v1.1
 - ⏸ 跨用户合影提醒：v2.0
@@ -150,13 +177,14 @@
 
 | 维度 | 现有模式 | 本功能延伸 |
 |---|---|---|
-| AI 异步任务 | ai_jobs 表 + runJob + provider 抽象 | 新增 `face-embed` / `face-extract` / `face-match` 三种 kind，复用 AiService |
+| AI 异步任务 | ai_jobs 表 + runJob + provider 抽象 | 新增 `face-embed` / `face-extract` / `face-extract-scratch` 三种 kind，复用 AiService |
 | 数据库迁移 | `scripts/migrations/*.sql` + `migrate.ts` 运行器 | 新增 `2026_10_12_face_profile.sql` |
 | Repository / Service | userId 强隔离、controller 接 `@CurrentUser()` | 同 |
 | 上传 | S3 直传 + upload module | 复用 upload API（不重写） |
 | 前端数据流 | TanStack Query + 适配层 `data/apiAdapter.js` | 同，加 `api/faces.js` + `data/faceAdapter.js` |
-| 路由 | `/login` `/dashboard` 等 | 新增 `/faces` |
+| 路由 | `/login` `/dashboard` 等 | 新增 `/faces` + `/faces/dumps` + `/faces/dumps/:id` |
 | 表单 / 上传 | 已有 `UploadModal` 等 | 复用 |
+| 文件时间 / EXIF | 当前对媒体文件用 `taken_at` 字段 | dump 内沿用：file mtime + 上传时间兜底 |
 
 ---
 
@@ -173,8 +201,14 @@
 | US-005 切换到"地点" Tab | 在地图上显示与本人有关的地点聚合 marker |
 | US-006 点击 backfill | 已存在的 photos 数量 X，全部处理完，进度条 100% |
 | US-007 删除 moment | `moment_faces` 自动级联删除 |
-| US-008 跨用户访问 | 401 / 403 / 404（不允许看到别 user 的 face profile 数据） |
+| US-008 跨用户访问 | 401 / 403 / 404（不允许看到别 user 的 face profile / dump 数据） |
 | US-009 上传重复参考图 | 抛 409 conflict（同一 userId 下 sourceUrl 重复检测） |
+| US-010 创建 dump | 新建 `scratch_dumps` 行，status=created；返回 dumpId |
+| US-011 上传 50 张照片到 dump | 50 行 `scratch_dump_items` + 50 个 `face-extract-scratch` job；UI 进度实时刷新 |
+| US-012 dump 处理完成后点击"过滤" | 拿 self profile embedding 检索；按 taken_at 倒序返回 hit 列表 |
+| US-013 dump 结果按时间线展示 | EXIF taken_at 排，文件 mtime 兜底，上传时间最终兜底；UI 标注排序键来源 |
+| US-014 删除 dump | `scratch_dump_items` 自动级联；用户搜索记录一并清除 |
+| US-015 dump 与库检索隔离 | dump 检索仅查该 dump，不影响正式 moments 库 |
 
 ### 5.2 非功能验收
 
@@ -217,17 +251,20 @@
 
 - 每个子模块完成 → 单元测试 + 集成测试全绿 → commit
 - 提交粒度建议（参见计划文档 `docs/superpowers/plans/2026-10-12-face-profile.md` 任务拆分）：
-  1. migration（加表 + pgvector） + 单测
-  2. face entity / repository + 单测
+  1. migration（pgvector + 4 张表 + ivfflat） + 单测
+  2. face entity / repository（user + moment + scratch_dump + scratch_dump_items） + 单测
   3. face provider 接口 + mock provider + 单测
   4. cloud/local provider + 单测
-  5. face service（self CRUD + 检索） + 单测
+  5. face service（self CRUD + 库检索） + 单测
   6. face controller + 集成测试
-  7. ai job 接入（face-embed/face-extract） + 单测
-  8. 检索接口（pgvector） + 集成测试
+  7. ai job 接入（face-embed / face-extract / face-extract-scratch） + 单测
+  8. 检索接口（pgvector / moment_faces） + 集成测试
   9. batch backfill + 集成测试
-  10. 前端 /faces 总览页（1-2 commit）
-  11. 前端 Moment Detail 按钮（1 commit）
+  10. dump service + dump controller + dump 检索（pgvector / scratch_dump_items） + 集成测试
+  11. 前端 /faces 总览页（self profile + 库检索） + commit
+  12. 前端 /faces/dumps 列表 + 新建 + 上传 + 进度 + commit
+  13. 前端 /faces/dumps/:id 详情 + 时间线结果 + commit
+  14. 前端 Moment Detail 提取按钮（1 commit）
 
 每 commit 含：
 - 实现代码

@@ -36,10 +36,13 @@ backend/src/face/
 ├── face-integration.spec.ts                # 端到端 supertest
 ├── entities/
 │   ├── user-face-embedding.entity.ts
-│   └── moment-face.entity.ts
+│   ├── moment-face.entity.ts
+│   ├── scratch-dump.entity.ts              # @Entity('scratch_dumps')
+│   └── scratch-dump-item.entity.ts         # @Entity('scratch_dump_items')
 ├── dto/
 │   ├── search-faces.dto.ts
-│   └── add-face-reference.dto.ts
+│   ├── add-face-reference.dto.ts
+│   └── add-scratch-dump-item.dto.ts
 ├── providers/
 │   ├── face-provider.interface.ts
 │   ├── face-provider.factory.ts
@@ -52,23 +55,29 @@ backend/src/face/
 ├── search/
 │   ├── vector-search.service.ts
 │   └── vector-search.service.spec.ts
+├── scratch/
+│   ├── scratch-dump.service.ts             # dump CRUD + dump 内检索
+│   ├── scratch-dump.service.spec.ts
+│   ├── scratch-dump.controller.ts          # REST: /faces/dumps/*
+│   └── scratch-dump-integration.spec.ts
 └── jobs/
-    ├── face-job.handler.ts                 # kind: face-embed / face-extract
+    ├── face-job.handler.ts                 # kind: face-embed / face-extract / face-extract-scratch
     └── face-job.handler.spec.ts
-backend/src/ai/entities/ai-job.entity.ts    # 扩展 AiJobKind + AiJobTargetType
-backend/src/ai/ai.service.ts                # applyToTarget 加 2 个 case
+backend/src/ai/entities/ai-job.entity.ts    # 扩展 AiJobKind + AiJobTargetType (face_dump_item)
+backend/src/ai/ai.service.ts                # applyToTarget 加 3 个 case
 backend/src/config/face.config.ts           # FACE_PROVIDER 等
 backend/scripts/migrations/
-└── 2026_10_12_face_profile.sql             # pgvector + 2 表 + ivfflat
+└── 2026_10_12_face_profile.sql             # pgvector + 4 表 + ivfflat
 ```
 
 前端（新增）：
 
 ```
 frontend/src/
-├── api/faces.js                            # facesApi 对象
+├── api/faces.js                            # facesApi + scratchDumpsApi 对象
 ├── data/
 │   ├── faceAdapter.js                      # 派生 timeline/persons/places
+│   ├── dumpAdapter.js                      # dump 时间线派生
 │   └── faceSelectors.js                    # 纯函数选择器
 ├── hooks/
 │   ├── useFaceSearch.js
@@ -83,25 +92,33 @@ frontend/src/
 │   ├── FacePersonCluster.jsx
 │   ├── FacePlaceMap.jsx
 │   ├── ExtractFaceButton.jsx
-│   └── FaceProfileSetupModal.jsx
-└── pages/FacesPage.jsx
+│   ├── FaceProfileSetupModal.jsx
+│   ├── DumpCard.jsx
+│   ├── DumpUploader.jsx
+│   ├── DumpProgressBar.jsx
+│   └── DumpTimelineView.jsx
+└── pages/
+    ├── FacesPage.jsx
+    ├── DumpsListPage.jsx
+    ├── DumpNewPage.jsx
+    └── DumpDetailPage.jsx
 ```
 
 修改：
 
 ```
 backend/src/app.module.ts                   # 注册 FaceModule
-backend/src/ai/entities/ai-job.entity.ts    # 扩展 union
+backend/src/ai/entities/ai-job.entity.ts    # 扩展 union（face_dump_item）
 backend/src/ai/ai.module.ts                 # 注册 FaceJobHandler
-backend/src/ai/ai.service.ts                # 加 handler case
+backend/src/ai/ai.service.ts                # 加 3 handler case
 backend/.env.example                        # FACE_PROVIDER 等
-frontend/src/App.jsx                        # 新路由 /faces
+frontend/src/App.jsx                        # 新路由 /faces + /faces/dumps*
 frontend/src/components/Header.jsx          # 加「面孔」导航
 ```
 
 ---
 
-## Task 1: pgvector + face schema migration
+## Task 1: pgvector + face schema + scratch dump migration
 
 **Files:**
 - Create: `backend/scripts/migrations/2026_10_12_face_profile.sql`
@@ -109,7 +126,7 @@ frontend/src/components/Header.jsx          # 加「面孔」导航
 
 **Interfaces:**
 - Consumes: PostgreSQL 16 + pgvector 已装
-- Produces: 表 `user_face_embeddings`、`moment_faces`、索引 ivfflat
+- Produces: 4 张表 + 索引 ivfflat（user_face_embeddings / moment_faces / scratch_dumps / scratch_dump_items）
 
 - [ ] **Step 1.1: 写迁移文件**
 
@@ -152,6 +169,53 @@ CREATE TABLE IF NOT EXISTS moment_faces (
 CREATE INDEX IF NOT EXISTS idx_mf_moment ON moment_faces (moment_id);
 CREATE INDEX IF NOT EXISTS idx_mf_user_moment ON moment_faces (user_id, moment_id);
 CREATE INDEX IF NOT EXISTS idx_mf_embedding ON moment_faces USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+
+-- 3. 临时 dump 元数据（scratch_dumps）
+CREATE TABLE IF NOT EXISTS scratch_dumps (
+  id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id        uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name           VARCHAR(120) NOT NULL,
+  description    TEXT,
+  status         VARCHAR(32) NOT NULL DEFAULT 'created',
+  total_items    INTEGER NOT NULL DEFAULT 0,
+  done_items     INTEGER NOT NULL DEFAULT 0,
+  failed_items   INTEGER NOT NULL DEFAULT 0,
+  hits_count     INTEGER NOT NULL DEFAULT 0,
+  last_search_at TIMESTAMP,
+  created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_sd_user_created ON scratch_dumps (user_id, created_at DESC);
+
+-- 4. 临时 dump 内单张照片 + 人脸（scratch_dump_items）
+CREATE TABLE IF NOT EXISTS scratch_dump_items (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id       uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  dump_id       uuid NOT NULL REFERENCES scratch_dumps(id) ON DELETE CASCADE,
+  source_url    TEXT NOT NULL,
+  thumbnail_url TEXT,
+  filename      VARCHAR(255),
+  taken_at      TIMESTAMP,
+  file_mtime    TIMESTAMP,
+  width         INTEGER,
+  height        INTEGER,
+  file_size     BIGINT,
+  bbox          jsonb,
+  embedding     vector(512),
+  provider      VARCHAR(32) NOT NULL DEFAULT 'mock',
+  model         VARCHAR(64),
+  quality_score REAL,
+  is_processed  BOOLEAN NOT NULL DEFAULT FALSE,
+  error         TEXT,
+  created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (dump_id, source_url)
+);
+CREATE INDEX IF NOT EXISTS idx_sdi_dump ON scratch_dump_items (dump_id);
+CREATE INDEX IF NOT EXISTS idx_sdi_user_dump ON scratch_dump_items (user_id, dump_id);
+CREATE INDEX IF NOT EXISTS idx_sdi_taken ON scratch_dump_items (dump_id, taken_at DESC NULLS LAST);
+CREATE INDEX IF NOT EXISTS idx_sdi_embedding ON scratch_dump_items
+  USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100)
+  WHERE is_processed = TRUE;
 ```
 
 - [ ] **Step 1.2: 跑迁移**
@@ -168,11 +232,13 @@ cd backend && npm run migrate:dev
 docker exec -i pgv-e2e-postgres psql -U postgres -d timex <<'SQL'
 \d user_face_embeddings
 \d moment_faces
-SELECT indexname FROM pg_indexes WHERE tablename IN ('user_face_embeddings','moment_faces');
+\d scratch_dumps
+\d scratch_dump_items
+SELECT indexname FROM pg_indexes WHERE tablename IN ('user_face_embeddings','moment_faces','scratch_dumps','scratch_dump_items');
 SQL
 ```
 
-预期：2 张表存在；`uq_user_face_source` 唯一约束；3 个 ivfflat 索引。
+预期：4 张表存在；`uq_user_face_source` + `uq_sdi_dump_source` 唯一约束；4 个 ivfflat 索引。
 
 - [ ] **Step 1.4: 验证 UNIQUE 约束**
 
@@ -191,16 +257,18 @@ VALUES ('aaaaaaaa-1111-2222-3333-444444444444','https://x/a.jpg',ARRAY_FILL(0, A
 
 ```bash
 git add backend/scripts/migrations/2026_10_12_face_profile.sql
-git commit -m "feat(db): face profile schema + pgvector extension"
+git commit -m "feat(db): face profile + scratch dump schema + pgvector"
 ```
 
 ---
 
-## Task 2: TypeORM entities（user-face-embedding + moment-face）
+## Task 2: TypeORM entities（user-face-embedding + moment-face + scratch-dump + scratch-dump-item）
 
 **Files:**
 - Create: `backend/src/face/entities/user-face-embedding.entity.ts`
 - Create: `backend/src/face/entities/moment-face.entity.ts`
+- Create: `backend/src/face/entities/scratch-dump.entity.ts`
+- Create: `backend/src/face/entities/scratch-dump-item.entity.ts`
 - Modify: `backend/src/config/database.config.ts`（注册 entities）
 - Test: `backend/src/face/entities/entities.integration.spec.ts`
 
@@ -2510,17 +2578,594 @@ git commit -m "docs: face profile in user-guide + roadmap + api + changelog"
 
 ---
 
+## Task 12: Scratch dump 子模块（后端 — entities 已含，Task 1/2 已就绪）
+
+**Files:**
+- Create: `backend/src/face/dto/add-scratch-dump-item.dto.ts`
+- Create: `backend/src/face/scratch/scratch-dump.service.ts`
+- Create: `backend/src/face/scratch/scratch-dump.service.spec.ts`
+- Create: `backend/src/face/scratch/scratch-dump.controller.ts`
+- Create: `backend/src/face/scratch/scratch-dump-integration.spec.ts`
+- Modify: `backend/src/face/face.module.ts`（注册 ScratchDumpService / Controller）
+- Modify: `backend/src/face/jobs/face-job.handler.ts`（加 `runExtractScratch`）
+- Modify: `backend/src/face/face.service.ts`（让 AiService.applyToTarget 转给 handler 时支持 dump item）
+- Modify: `backend/src/ai/entities/ai-job.entity.ts`（AiJobKind 加 'face-extract-scratch'，AiJobTargetType 加 'face_dump_item'）
+
+**Interfaces:**
+- Consumes: 现有 FaceModule / FaceProviderFactory / VectorSearchService / AiService（扩展一种 kind）
+- Produces: `/api/faces/dumps/*` REST + ScratchDumpService（create/addItem/search）
+
+- [ ] **Step 12.1: DTO**
+
+`backend/src/face/dto/add-scratch-dump-item.dto.ts`：
+
+```typescript
+import {
+  IsDateString, IsInt, IsOptional, IsString, IsUrl, Min,
+} from 'class-validator';
+
+export class AddScratchDumpItemDto {
+  @IsString()
+  @IsUrl({ require_tld: false })
+  imageUrl!: string;
+
+  @IsOptional()
+  @IsDateString()
+  takenAt?: string;
+
+  @IsOptional()
+  @IsDateString()
+  fileMtime?: string;
+
+  @IsOptional()
+  @IsString()
+  filename?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  width?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  height?: number;
+}
+```
+
+- [ ] **Step 12.2: 扩展 AiJobKind/AiJobTargetType**
+
+（已和 Task 7 / Task 8 一起做；这一步仅验证 enum 已含 `'face-extract-scratch'` / `'face_dump_item'`。）
+
+- [ ] **Step 12.3: FaceJobHandler.runExtractScratch**
+
+新增方法（继续 `runEmbed` / `runExtract` 之后）：
+
+```typescript
+async runExtractScratch(
+  userId: string,
+  targetId: string,                        // scratch_dump_items.id
+  input: FaceExtractScratchInput,          // { dumpId, imageUrl }
+): Promise<{ provider: string; faces: number; durationMs: number }> {
+  const startedAt = Date.now();
+  const primary = this.factory.resolve();
+  let faces: FaceEmbedding[] = [];
+  let providerName: 'cloud' | 'local' | 'mock' = primary.name;
+  try {
+    faces = await primary.detectAndEmbed(input.imageUrl);
+  } catch (e) {
+    this.log.warn(`scratch extract failed; fallback to mock: ${(e as Error).message}`);
+    const mock = await new MockFaceProvider().detectAndEmbed(input.imageUrl);
+    faces = mock;
+    providerName = 'mock';
+  }
+  const chosen = pickLargest(faces);
+  await this.sdi.update(
+    { id: targetId, userId },
+    {
+      embedding: chosen ? chosen.vector : null,
+      bbox: chosen?.bbox ?? null,
+      provider: providerName,
+      model: 'auto',
+      qualityScore: chosen?.confidence ?? null,
+      isProcessed: chosen !== null,
+      error: chosen ? null : 'no_face_detected',
+    },
+  );
+  // 递增 dump 的 done_items；事务内做（或在 controller 内做——见 § 错误处理）
+  if (chosen) {
+    await this.sdInc(input.dumpId, userId);
+  } else {
+    await this.sdFail(input.dumpId, userId);
+  }
+  return { provider: providerName, faces: chosen ? 1 : 0, durationMs: Date.now() - startedAt };
+}
+
+interface FaceExtractScratchInput { dumpId: string; imageUrl: string; }
+```
+
+构造器需增加 `@InjectRepository(ScratchDump) sd` 与 `@InjectRepository(ScratchDumpItem) sdi`；`sdInc/sdFail` 调 `update` 增 `done_items` / `failed_items`。
+
+- [ ] **Step 12.4: ScratchDumpService**
+
+```typescript
+import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { DataSource, Repository } from 'typeorm';
+import { ScratchDump } from '../entities/scratch-dump.entity';
+import { ScratchDumpItem } from '../entities/scratch-dump-item.entity';
+import { AiService } from '../../ai/ai.service';
+import { UserFaceEmbedding } from '../entities/user-face-embedding.entity';
+import { VectorSearchService } from '../search/vector-search.service';
+
+@Injectable()
+export class ScratchDumpService {
+  private log = new Logger(ScratchDumpService.name);
+
+  constructor(
+    @InjectRepository(ScratchDump) private sd: Repository<ScratchDump>,
+    @InjectRepository(ScratchDumpItem) private sdi: Repository<ScratchDumpItem>,
+    @InjectRepository(UserFaceEmbedding) private ufe: Repository<UserFaceEmbedding>,
+    private ds: DataSource,
+    private ai: AiService,
+    private search: VectorSearchService,
+  ) {}
+
+  async create(userId: string, input: { name: string; description?: string }) {
+    return this.sd.save(this.sd.create({
+      userId, name: input.name, description: input.description, status: 'created',
+    }));
+  }
+  async list(userId: string, limit = 50) {
+    return this.sd.find({ where: { userId }, order: { createdAt: 'DESC' }, take: Math.min(limit, 200) });
+  }
+  async getOne(userId: string, dumpId: string) {
+    const d = await this.sd.findOne({ where: { id: dumpId, userId } });
+    if (!d) throw new NotFoundException('dump not found');
+    return d;
+  }
+  async remove(userId: string, dumpId: string) {
+    const res = await this.sd.delete({ id: dumpId, userId });
+    if (res.affected === 0) throw new NotFoundException('dump not found');
+  }
+  async addItem(userId: string, dumpId: string, input: AddScratchDumpItemDto) {
+    const d = await this.getOne(userId, dumpId);
+    let item: ScratchDumpItem;
+    try {
+      item = await this.sdi.save(this.sdi.create({
+        userId, dumpId: d.id,
+        sourceUrl: input.imageUrl,
+        takenAt: input.takenAt ? new Date(input.takenAt) : null,
+        fileMtime: input.fileMtime ? new Date(input.fileMtime) : null,
+        filename: input.filename ?? null,
+        width: input.width ?? null,
+        height: input.height ?? null,
+      }));
+    } catch (e: unknown) {
+      if ((e as { code?: string })?.code === '23505') throw new ConflictException('item already exists in dump');
+      throw e;
+    }
+    await this.ds.query(`UPDATE scratch_dumps SET total_items = total_items + 1, updated_at = NOW()
+                          WHERE id = $1 AND user_id = $2`, [d.id, userId]);
+    const job = await this.ai.submit({
+      userId,
+      kind: 'face-extract-scratch',
+      targetType: 'face_dump_item',
+      targetId: item.id,
+      promptInput: { dumpId: d.id, imageUrl: input.imageUrl } as never,
+    });
+    return { itemId: item.id, jobId: job.id };
+  }
+  async listItems(userId: string, dumpId: string, opts?: { status?: 'pending' | 'processed' | 'failed' }) {
+    await this.getOne(userId, dumpId);
+    const where: any = { userId, dumpId };
+    if (opts?.status === 'pending')  where.isProcessed = false;
+    if (opts?.status === 'processed') where.isProcessed = true;
+    if (opts?.status === 'failed')   where.error = Not(IsNull());
+    return this.sdi.find({ where, order: { takenAt: 'DESC NULLS LAST', createdAt: 'DESC' }, take: 1000 });
+  }
+  async getStatus(userId: string, dumpId: string) {
+    const d = await this.getOne(userId, dumpId);
+    return { total: d.totalItems, done: d.doneItems, failed: d.failedItems, status: d.status };
+  }
+
+  /** 检索：拿 user_face_embeddings，对该 dump 的 scratch_dump_items 做 ANN */
+  async searchDump(userId: string, dumpId: string, opts: { threshold?: number; topK?: number }) {
+    await this.getOne(userId, dumpId);
+    const refs = await this.ufe.find({ where: { userId, isEnabled: true } });
+    if (refs.length === 0) return [];
+    const queries = refs.map((r) => r.embedding);
+    const hits = await this.search.searchDumpItemsByEmbeddings(
+      userId, dumpId, queries, opts.threshold, opts.topK,
+    );
+    if (hits.length === 0) {
+      // 缓存 hits_count
+      await this.ds.query(`UPDATE scratch_dumps SET hits_count = 0, last_search_at = NOW()
+                            WHERE id = $1 AND user_id = $2`, [dumpId, userId]);
+      return [];
+    }
+    const ids = hits.map((h) => h.itemId);
+    const items = await this.sdi.find({ where: ids.map((id) => ({ id, userId })) });
+    const byId = new Map(items.map((i) => [i.id, i]));
+    const out = hits
+      .map((h) => {
+        const item = byId.get(h.itemId);
+        if (!item) return null;
+        return {
+          item,
+          distance: h.distance,
+          sortKey: item.takenAt ? 'takenAt' : item.fileMtime ? 'fileMtime' : 'uploadedAt',
+          sortValue: (item.takenAt ?? item.fileMtime ?? item.createdAt).toISOString(),
+        } as DumpHit;
+      })
+      .filter((x): x is DumpHit => x !== null)
+      .sort((a, b) => b.sortValue.localeCompare(a.sortValue));   // 时间倒序
+    await this.ds.query(`UPDATE scratch_dumps SET hits_count = $1, last_search_at = NOW()
+                          WHERE id = $2 AND user_id = $3`,
+      [out.length, dumpId, userId]);
+    return out;
+  }
+}
+
+interface DumpHit {
+  item: ScratchDumpItem;
+  distance: number;
+  sortKey: 'takenAt' | 'fileMtime' | 'uploadedAt';
+  sortValue: string;
+}
+```
+
+- [ ] **Step 12.5: VectorSearchService 加 dump 表方法**
+
+```typescript
+async searchDumpItemsByEmbeddings(
+  userId: string,
+  dumpId: string,
+  queries: number[][],
+  threshold?: number,
+  topK?: number,
+): Promise<Array<{ itemId: string; distance: number }>> {
+  if (queries.length === 0) return [];
+  const thr = threshold ?? this.cfg.search.threshold;
+  const k = topK ?? this.cfg.search.topK;
+  const sql = `
+    WITH q AS (
+      SELECT v, ord FROM unnest($3::float[][]) WITH ORDINALITY AS t(v, ord)
+    ),
+    distances AS (
+      SELECT sdi.id AS item_id,
+             sdi.embedding <=> q.v AS distance
+        FROM scratch_dump_items sdi
+        CROSS JOIN q
+       WHERE sdi.user_id = $1 AND sdi.dump_id = $2 AND sdi.is_processed = TRUE
+    ),
+    best AS (
+      SELECT item_id, MIN(distance) AS distance
+        FROM distances
+       GROUP BY item_id
+      HAVING MIN(distance) <= $4
+    )
+    SELECT b.item_id::text AS "itemId", b.distance
+      FROM best b
+     ORDER BY b.distance ASC
+     LIMIT $5;
+  `;
+  const rows = await this.ds.query(sql, [userId, dumpId, queries, thr, k]);
+  return (rows as Array<{ itemId: string; distance: number }>)
+    .map((r) => ({ itemId: r.itemId, distance: Number(r.distance) }));
+}
+```
+
+补单测在 `vector-search.service.spec.ts`：
+
+```typescript
+it('searchDumpItemsByEmbeddings builds expected SQL with dump_id', async () => {
+  const ds = { query: jest.fn().mockResolvedValue([]) } as never;
+  const svc = new VectorSearchService(ds, cfg);
+  await svc.searchDumpItemsByEmbeddings('u1', 'd1', [new Array(512).fill(0)], 0.5, 100);
+  const [sql, params] = (ds.query as jest.Mock).mock.calls[0];
+  expect(sql).toContain('scratch_dump_items');
+  expect(params[1]).toBe('d1');
+  expect(params[3]).toBe(0.5);
+  expect(params[4]).toBe(100);
+});
+```
+
+- [ ] **Step 12.6: ScratchDumpController**
+
+```typescript
+import { Body, Controller, Delete, Get, Param, Post, Query } from '@nestjs/common';
+import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
+import { ScratchDumpService } from './scratch-dump.service';
+import { AddScratchDumpItemDto } from '../dto/add-scratch-dump-item.dto';
+
+@Controller('faces/dumps')
+export class ScratchDumpController {
+  constructor(private svc: ScratchDumpService) {}
+
+  @Post()
+  create(@CurrentUser() u: AuthUser, @Body() body: { name: string; description?: string }) {
+    return this.svc.create(u.id, body);
+  }
+  @Get()
+  list(@CurrentUser() u: AuthUser, @Query('limit') limit?: string) {
+    return this.svc.list(u.id, limit ? Number(limit) : 50);
+  }
+  @Get(':id')
+  one(@CurrentUser() u: AuthUser, @Param('id') id: string) {
+    return this.svc.getOne(u.id, id);
+  }
+  @Delete(':id')
+  remove(@CurrentUser() u: AuthUser, @Param('id') id: string) {
+    return this.svc.remove(u.id, id);
+  }
+  @Post(':id/photos')
+  addItem(@CurrentUser() u: AuthUser, @Param('id') id: string, @Body() body: AddScratchDumpItemDto) {
+    return this.svc.addItem(u.id, id, body);
+  }
+  @Get(':id/items')
+  items(@CurrentUser() u: AuthUser, @Param('id') id: string,
+         @Query('status') status?: 'pending' | 'processed' | 'failed') {
+    return this.svc.listItems(u.id, id, { status });
+  }
+  @Get(':id/status')
+  status(@CurrentUser() u: AuthUser, @Param('id') id: string) {
+    return this.svc.getStatus(u.id, id);
+  }
+  @Post(':id/search')
+  search(@CurrentUser() u: AuthUser, @Param('id') id: string,
+         @Body() body: { threshold?: number; topK?: number }) {
+    return this.svc.searchDump(u.id, id, body);
+  }
+}
+```
+
+- [ ] **Step 12.7: 服务单测**
+
+`backend/src/face/scratch/scratch-dump.service.spec.ts`（伪代码概要）：
+
+```typescript
+describe('ScratchDumpService', () => {
+  describe('create', () => { it('saves dump with status=created and returns it'); });
+  describe('addItem', () => {
+    it('increments total_items & enqueues face-extract-scratch');
+    it('throws ConflictException on duplicate sourceUrl in same dump');
+  });
+  describe('searchDump', () => {
+    it('returns [] when no refs enabled');
+    it('maps hits → items joined by id with sortKey derivation');
+    it('sorts by sortValue DESC (takenAt 优先); updates hits_count');
+  });
+  describe('getOne', () => { it('throws NotFound when dump missing or wrong user'); });
+});
+```
+
+- [ ] **Step 12.8: supertest 集成测**
+
+`backend/src/face/scratch/scratch-dump-integration.spec.ts`：覆盖 `POST /faces/dumps` → `POST /faces/dumps/:id/photos` → `GET /faces/dumps/:id/status` → `POST /faces/dumps/:id/search` 完整路径，用 mock Service。
+
+- [ ] **Step 12.9: 跑测试 + commit**
+
+```bash
+cd backend && npx jest src/face
+git add backend/src/face backend/src/ai
+git commit -m "feat(backend): ScratchDumpService + ScratchDumpController + face-extract-scratch job"
+```
+
+---
+
+## Task 13: 前端 /faces/dumps 列表 + 新建 + 上传 + 进度
+
+**Files:**
+- Modify: `frontend/src/api/faces.js`（加 scratchDumpsApi）
+- Create: `frontend/src/hooks/useScratchDumps.js`
+- Create: `frontend/src/hooks/useDumpStatus.js`
+- Create: `frontend/src/hooks/useDumpSearch.js`
+- Create: `frontend/src/components/DumpCard.jsx`
+- Create: `frontend/src/components/DumpUploader.jsx`
+- Create: `frontend/src/components/DumpProgressBar.jsx`
+- Create: `frontend/src/pages/DumpsListPage.jsx`
+- Create: `frontend/src/pages/DumpNewPage.jsx`
+- Create: 对应 `*.test.jsx`
+
+**Interfaces:**
+- Consumes: scratchDumpsApi + TanStack Query
+- Produces: dump 列表页 + 上传组件 + 进度条
+
+- [ ] **Step 13.1: scratchDumpsApi**
+
+```javascript
+export const scratchDumpsApi = {
+  create:    (body)            => client.post('/faces/dumps', body).then(r => r.data),
+  list:      (limit = 50)      => client.get('/faces/dumps', { params: { limit } }).then(r => r.data),
+  get:       (id)              => client.get(`/faces/dumps/${id}`).then(r => r.data),
+  remove:    (id)              => client.delete(`/faces/dumps/${id}`).then(r => r.data),
+  addItem:   (id, body)        => client.post(`/faces/dumps/${id}/photos`, body).then(r => r.data),
+  listItems: (id, status)      => client.get(`/faces/dumps/${id}/items`, { params: status ? { status } : {} }).then(r => r.data),
+  status:    (id)              => client.get(`/faces/dumps/${id}/status`).then(r => r.data),
+  search:    (id, body)        => client.post(`/faces/dumps/${id}/search`, body).then(r => r.data),
+};
+```
+
+- [ ] **Step 13.2: hooks**
+
+`useScratchDumps.js`：`useQuery({ queryKey: ['scratch-dumps'], queryFn: () => scratchDumpsApi.list() })` + `useCreateDump` / `useRemoveDump`。
+
+`useDumpStatus.js`：`useQuery({ queryKey: ['dump-status', dumpId], queryFn: () => scratchDumpsApi.status(dumpId), refetchInterval: (q) => (q.state.data?.status === 'processing' ? 1000 : false) })`。
+
+`useDumpSearch.js`：`useMutation({ mutationFn: ({ dumpId, opts }) => scratchDumpsApi.search(dumpId, opts) })`。
+
+- [ ] **Step 13.3: DumpUploader**
+
+接受多个 File，循环：
+1. client.post('/upload/sign', { mimeType, fileSize, kind: 'photo' }) 拿 url + key
+2. PUT 到 OSS
+3. scratchDumpsApi.addItem(dumpId, { imageUrl, takenAt, fileMtime, filename, width, height })
+4. 进度回调
+
+简化实现：本期可只支持串行 + 单文件进度条；后续并行优化。
+
+- [ ] **Step 13.4: DumpProgressBar**
+
+`{ total, done, failed }` 三色条 + 失败数显示。
+
+- [ ] **Step 13.5: DumpsListPage**
+
+`useScratchDumps` 拉列表，每个 dump 一张 `<DumpCard />`，点击 → 跳 `/faces/dumps/:id`。
+"DumpCard" 显示 name、status、progress、最新 hits_count。
+
+- [ ] **Step 13.6: DumpNewPage**
+
+表单：name + description（可选）；提交后调 `create` → 跳 `/faces/dumps/:id`。
+
+- [ ] **Step 13.7: 路由**
+
+`frontend/src/App.jsx` 加：
+```jsx
+<Route path="/faces/dumps"     element={<DumpsListPage />} />
+<Route path="/faces/dumps/new" element={<DumpNewPage />} />
+<Route path="/faces/dumps/:id" element={<DumpDetailPage />} />
+```
+
+- [ ] **Step 13.8: 测试**
+
+`DumpUploader.test.jsx`：mock client + scratchDumpsApi，验证上传回调链路。
+
+- [ ] **Step 13.9: 跑测试 + commit**
+
+```bash
+cd frontend && npm run test -- --run
+git add frontend/src/api/faces.js frontend/src/hooks/useScratchDumps.js frontend/src/hooks/useDumpStatus.js frontend/src/hooks/useDumpSearch.js frontend/src/components/DumpCard.jsx frontend/src/components/DumpUploader.jsx frontend/src/components/DumpProgressBar.jsx frontend/src/pages/DumpsListPage.jsx frontend/src/pages/DumpNewPage.jsx frontend/src/components/*.test.jsx frontend/src/App.jsx
+git commit -m "feat(frontend): /faces/dumps list + new + uploader + progress"
+```
+
+---
+
+## Task 14: 前端 /faces/dumps/:id 详情 + DumpTimelineView 时间线结果
+
+**Files:**
+- Create: `frontend/src/data/dumpAdapter.js`
+- Create: `frontend/src/components/DumpTimelineView.jsx`
+- Create: `frontend/src/components/DumpTimelineView.test.jsx`
+- Create: `frontend/src/pages/DumpDetailPage.jsx`
+- Create: `frontend/src/pages/DumpDetailPage.test.jsx`
+
+- [ ] **Step 14.1: dumpAdapter**
+
+```javascript
+/** 把后端 hits 数组按 COALESCE(takenAt, fileMtime, uploadedAt) 倒序分组，按年分组 */
+export function groupDumpHitsByTimeline(hits) {
+  const groups = new Map();
+  for (const h of hits) {
+    const y = new Date(h.sortValue).getFullYear();
+    const k = String(y);
+    if (!groups.has(k)) groups.set(k, { year: y, items: [] });
+    groups.get(k).items.push(h);
+  }
+  for (const g of groups.values()) g.items.sort((a, b) => b.sortValue.localeCompare(a.sortValue));
+  return [...groups.values()].sort((a, b) => b.year - a.year);
+}
+```
+
+- [ ] **Step 14.2: DumpTimelineView**
+
+```jsx
+import { groupDumpHitsByTimeline } from '../data/dumpAdapter';
+
+export function DumpTimelineView({ hits }) {
+  const groups = groupDumpHitsByTimeline(hits);
+  return (
+    <div className="dump-timeline">
+      {groups.map((g) => (
+        <section key={g.year}>
+          <h3>{g.year} <span className="count">{g.items.length}</span></h3>
+          <ul>
+            {g.items.map((h) => (
+              <li key={h.item.id}>
+                <a href={h.item.sourceUrl} target="_blank" rel="noreferrer">
+                  {h.item.thumbnailUrl && <img src={h.item.thumbnailUrl} alt="" />}
+                  <span className="filename">{h.item.filename || h.item.sourceUrl.split('/').pop()}</span>
+                  <span className="ts">{new Date(h.sortValue).toLocaleDateString()}</span>
+                  <span className={`chip sortkey-${h.sortKey}`}>{h.sortKey}</span>
+                  <span className="dist">{h.distance.toFixed(2)}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+    </div>
+  );
+}
+```
+
+- [ ] **Step 14.3: DumpDetailPage**
+
+```jsx
+import { useState } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { useDumpStatus } from '../hooks/useDumpStatus';
+import { useDumpSearch } from '../hooks/useDumpSearch';
+import { useScratchDumps } from '../hooks/useScratchDumps';
+import { DumpUploader } from '../components/DumpUploader';
+import { DumpProgressBar } from '../components/DumpProgressBar';
+import { DumpTimelineView } from '../components/DumpTimelineView';
+
+export function DumpDetailPage() {
+  const { id } = useParams();
+  const list = useScratchDumps();                     // 触发 invalidate
+  const status = useDumpStatus(id);
+  const [hits, setHits] = useState<any[]>([]);
+  const search = useDumpSearch();
+
+  async function doSearch() {
+    const r = await search.mutateAsync({ dumpId: id, opts: { topK: 200 } });
+    setHits(r);
+  }
+
+  return (
+    <div className="dump-detail">
+      <Link to="/faces/dumps">← 返回</Link>
+      <h1>{status.data?.name ?? '...'}</h1>
+
+      <DumpProgressBar total={status.data?.total ?? 0} done={status.data?.done ?? 0} failed={status.data?.failed ?? 0} />
+
+      <DumpUploader dumpId={id} />
+
+      <button onClick={doSearch} disabled={search.isPending}>过滤</button>
+      {hits.length > 0 && <DumpTimelineView hits={hits} />}
+    </div>
+  );
+}
+```
+
+- [ ] **Step 14.4: 测试**
+
+覆盖 `groupDumpHitsByTimeline` + `DumpTimelineView` 渲染 + `DumpDetailPage` 切片（mock hooks）。
+
+- [ ] **Step 14.5: 跑测试 + commit**
+
+```bash
+cd frontend && npm run test -- --run
+git add frontend/src/data/dumpAdapter.js frontend/src/components/DumpTimelineView.jsx frontend/src/components/DumpTimelineView.test.jsx frontend/src/pages/DumpDetailPage.jsx frontend/src/pages/DumpDetailPage.test.jsx
+git commit -m "feat(frontend): /faces/dumps/:id detail + dump timeline view"
+```
+
+---
+
 ## Self-Review
 
 - ✅ Spec coverage：
-  - §3 数据模型 → Task 1（简化为 2 张表）
+  - §3 数据模型 → Task 1（4 张表，含 dump 两张）
   - §4 后端模块（Service / Controller / Provider / AI job / Search）→ Task 3-7
-  - §5 前端（api/adapter/hooks/components/page）→ Task 9
+  - §4.3 ScratchDumpService + Controller + AI job extension → Task 12
+  - §5 前端（api/adapter/hooks/components/page）→ Task 9-11
+  - §5.x dumps 列表 + 详情 → Task 13 / 14
   - §10 测试 → 各 Task 自带测 + Task 8 后端汇总
-  - §11 任务拆分（17 → 11）→ 与设计文档 §11 一致
+  - §11 任务拆分（11 → 14 task + dump 增量）→ 与设计文档 §11 一致
 - ✅ Placeholder：全 step 含代码或命令，无 TBD
-- ✅ Type 一致：`FaceProvider`、`FaceEmbedding`、`BBox`、`UserFaceEmbedding`、`MomentFace`、`FaceService.searchMine` 名称与签名一致
-- ✅ 单 self 档案约束贯穿：所有 plan 中均不出现 `personFace*` / `PersonFace*` / `isSelf` / PersonPage Tab
+- ✅ Type 一致：`FaceProvider` / `FaceEmbedding` / `BBox` / `UserFaceEmbedding` / `MomentFace` / `ScratchDump` / `ScratchDumpItem` / `FaceService.searchMine` / `ScratchDumpService.searchDump` 名称一致
+- ✅ 单 self + 双流程（库 + dump）约束贯穿：所有 plan 中均不出现 personFace* / isSelf / PersonPage Tab
 
 ## Execution Handoff
 
