@@ -18,6 +18,7 @@ import { AppThrottlerModule } from './throttler/throttler.module';
 import { AiModule } from './ai/ai.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ExportModule } from './export/export.module';
+import { FaceModule } from './face/face.module';
 import { SecurityHeadersMiddleware } from './common/middleware/security-headers.middleware';
 import { RequestLoggerMiddleware } from './common/middleware/request-logger.middleware';
 
@@ -44,6 +45,7 @@ import { RequestLoggerMiddleware } from './common/middleware/request-logger.midd
     AiModule,
     DashboardModule,
     ExportModule,
+    FaceModule,
   ],
   controllers: [AppController],
   providers: [AppService],
