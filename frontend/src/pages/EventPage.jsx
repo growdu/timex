@@ -2,6 +2,7 @@ import { Link, useParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import SpaceMap from "../components/SpaceMap.jsx";
 import { AiActionButton } from "../components/AiActionButton";
+import { ExtractFaceButton } from "../components/ExtractFaceButton";
 
 export default function EventPage({
   Layout,
@@ -118,6 +119,7 @@ export default function EventPage({
               label="AI 一句话摘要"
               onSettled={() => queryClient.invalidateQueries({ queryKey: ['events'] })}
             />
+            <ExtractFaceButton momentId={event.id} />
           </div>
         </div>
       </section>
