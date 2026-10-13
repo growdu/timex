@@ -15,6 +15,7 @@ import SpacePage from "./pages/SpacePage.jsx";
 import DashboardPage from "./pages/DashboardPage.jsx";
 import TimelinePage from "./pages/TimelinePage.jsx";
 import LinesPage from "./pages/LinesPage.jsx";
+import FacesPage from "./pages/FacesPage.jsx";
 import ExportAlbumPage from "./pages/ExportAlbumPage.jsx";
 import ExportStorybookPage from "./pages/ExportStorybookPage.jsx";
 import ExportTimelinePage from "./pages/ExportTimelinePage.jsx";
@@ -360,6 +361,15 @@ function AppContent({ user, onLogin }) {
                 Layout={AppLayout}
                 {...makeLayoutProps()}
               />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/faces"
+          element={
+            <ProtectedRoute>
+              <FacesPage />
             </ProtectedRoute>
           }
         />

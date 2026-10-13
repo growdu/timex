@@ -4,6 +4,7 @@ export const timexData = {
     { id: "timeline", label: "时间线", note: "按事件回看人生轨迹", to: "/timeline" },
     { id: "space", label: "空间", note: "按地点重走记忆路线", to: "/space" },
     { id: "people", label: "人物", note: "按关系检索共同经历", to: "/people" },
+    { id: "faces", label: "面孔", note: "用自己的脸找回所有照片", to: "/faces" },
     { id: "memoir", label: "回忆录", note: "把事件编排成章节", to: "/memoir" },
   ],
   stages: [
