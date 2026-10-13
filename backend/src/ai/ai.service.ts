@@ -79,7 +79,11 @@ export class AiService {
 
     try {
       // face-* 任务不走 LLM，直接调 FaceJobHandler
-      if (job.kind === 'face-embed' || job.kind === 'face-extract') {
+      if (
+        job.kind === 'face-embed' ||
+        job.kind === 'face-extract' ||
+        job.kind === 'face-extract-scratch'
+      ) {
         await this.applyToTarget(job, '', null, promptInput);
         job.status = 'succeeded';
         await this.repo.save(job);
@@ -201,6 +205,18 @@ export class AiService {
           imageUrl: string;
         };
         await this.faceHandler.runExtract(job.userId, job.targetId, inp);
+        break;
+      }
+      case 'face-extract-scratch': {
+        const inp = promptInput as unknown as {
+          dumpId: string;
+          imageUrl: string;
+        };
+        await this.faceHandler.runExtractScratch(
+          job.userId,
+          job.targetId,
+          inp,
+        );
         break;
       }
     }

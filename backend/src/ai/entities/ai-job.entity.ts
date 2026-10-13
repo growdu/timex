@@ -15,7 +15,8 @@ export type AiJobKind =
   | 'chapter-summary'
   | 'event-summary'
   | 'face-embed'
-  | 'face-extract';
+  | 'face-extract'
+  | 'face-extract-scratch';
 
 export type AiJobStatus = 'queued' | 'running' | 'succeeded' | 'failed';
 export type AiJobTargetType =
@@ -24,7 +25,8 @@ export type AiJobTargetType =
   | 'chapter'
   | 'event'
   | 'face_reference'
-  | 'face_match';
+  | 'face_match'
+  | 'face_dump_item';
 
 @Entity('ai_jobs')
 @Index(['userId', 'status'])

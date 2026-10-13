@@ -5,12 +5,16 @@ import { FaceProviderFactory } from '../providers/face-provider.factory';
 import { MockFaceProvider } from '../providers/mock.face-provider';
 import { UserFaceEmbedding } from '../entities/user-face-embedding.entity';
 import { MomentFace } from '../entities/moment-face.entity';
+import { ScratchDump } from '../entities/scratch-dump.entity';
+import { ScratchDumpItem } from '../entities/scratch-dump-item.entity';
 import { FACE_CONFIG } from '../../config/face.config';
 
 describe('FaceJobHandler', () => {
   let h: FaceJobHandler;
   let ufe: { update: jest.Mock };
   let mf: { delete: jest.Mock; save: jest.Mock };
+  let sd: { increment: jest.Mock };
+  let sdi: { update: jest.Mock };
 
   beforeEach(async () => {
     ufe = { update: jest.fn().mockResolvedValue({ affected: 1 }) };
@@ -18,11 +22,15 @@ describe('FaceJobHandler', () => {
       delete: jest.fn().mockResolvedValue({ affected: 0 }),
       save: jest.fn().mockResolvedValue([]),
     };
+    sd = { increment: jest.fn().mockResolvedValue({ affected: 1 }) };
+    sdi = { update: jest.fn().mockResolvedValue({ affected: 1 }) };
     const mod = await Test.createTestingModule({
       providers: [
         FaceJobHandler,
         { provide: getRepositoryToken(UserFaceEmbedding), useValue: ufe },
         { provide: getRepositoryToken(MomentFace), useValue: mf },
+        { provide: getRepositoryToken(ScratchDump), useValue: sd },
+        { provide: getRepositoryToken(ScratchDumpItem), useValue: sdi },
         { provide: FACE_CONFIG, useValue: { provider: 'mock', cloud: {}, local: {}, search: {} } },
         FaceProviderFactory,
         MockFaceProvider,
@@ -102,5 +110,47 @@ describe('FaceJobHandler', () => {
     expect(ufe.update).toHaveBeenCalled();
     const [, payload] = ufe.update.mock.calls[0];
     expect(payload.provider).toBe('mock'); // fell back
+  });
+
+  it('runExtractScratch writes chosen face embedding and increments done_items', async () => {
+    const out = await h.runExtractScratch('u1', 'i1', {
+      dumpId: 'd1',
+      imageUrl: 'https://x/scratch.jpg',
+    });
+    expect(out.faces).toBe(1);
+    expect(out.provider).toBe('mock');
+    expect(sdi.update).toHaveBeenCalled();
+    const [where, payload] = sdi.update.mock.calls[0];
+    expect(where).toEqual({ id: 'i1', userId: 'u1' });
+    expect(payload.embedding).toHaveLength(512);
+    expect(payload.isProcessed).toBe(true);
+    expect(payload.error).toBeNull();
+    expect(sd.increment).toHaveBeenCalledWith(
+      { id: 'd1', userId: 'u1' },
+      'doneItems',
+      1,
+    );
+  });
+
+  it('runExtractScratch marks is_processed=false and bumps failed_items when no face', async () => {
+    const factory = (h as unknown as { factory: FaceProviderFactory }).factory;
+    jest.spyOn(factory, 'resolve').mockReturnValue({
+      name: 'mock',
+      detectAndEmbed: async () => [],
+      embedFace: async () => ({}) as never,
+    } as never);
+    const out = await h.runExtractScratch('u1', 'i1', {
+      dumpId: 'd1',
+      imageUrl: 'https://x/empty.jpg',
+    });
+    expect(out.faces).toBe(0);
+    const [, payload] = sdi.update.mock.calls[0];
+    expect(payload.isProcessed).toBe(false);
+    expect(payload.error).toBe('no_face_detected');
+    expect(sd.increment).toHaveBeenCalledWith(
+      { id: 'd1', userId: 'u1' },
+      'failedItems',
+      1,
+    );
   });
 });

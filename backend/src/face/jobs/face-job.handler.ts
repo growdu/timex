@@ -3,6 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserFaceEmbedding } from '../entities/user-face-embedding.entity';
 import { MomentFace } from '../entities/moment-face.entity';
+import { ScratchDump } from '../entities/scratch-dump.entity';
+import { ScratchDumpItem } from '../entities/scratch-dump-item.entity';
 import { FaceProviderFactory } from '../providers/face-provider.factory';
 import {
   BBox,
@@ -22,6 +24,11 @@ export interface FaceExtractInput {
   imageUrl: string;
 }
 
+export interface FaceExtractScratchInput {
+  dumpId: string;
+  imageUrl: string;
+}
+
 @Injectable()
 export class FaceJobHandler {
   private readonly log = new Logger(FaceJobHandler.name);
@@ -31,6 +38,10 @@ export class FaceJobHandler {
     private readonly ufe: Repository<UserFaceEmbedding>,
     @InjectRepository(MomentFace)
     private readonly mf: Repository<MomentFace>,
+    @InjectRepository(ScratchDump)
+    private readonly sd: Repository<ScratchDump>,
+    @InjectRepository(ScratchDumpItem)
+    private readonly sdi: Repository<ScratchDumpItem>,
     private readonly factory: FaceProviderFactory,
   ) {}
 
@@ -75,6 +86,62 @@ export class FaceJobHandler {
     }));
     if (rows.length) await this.mf.save(rows);
     return { provider, faces: rows.length };
+  }
+
+  /**
+   * scratch dump 单张照片 → 提取最大人脸 embedding，写回 scratch_dump_items，
+   * 并在 dump 上递增 done_items / failed_items。失败回退到 mock，与 runEmbed / runExtract 同款。
+   */
+  async runExtractScratch(
+    userId: string,
+    targetId: string,
+    input: FaceExtractScratchInput,
+  ): Promise<{ provider: string; faces: number; durationMs: number }> {
+    const startedAt = Date.now();
+    const primary = this.factory.resolve();
+    let faces: FaceEmbedding[] = [];
+    let providerName: 'cloud' | 'local' | 'mock' = primary.name;
+    try {
+      faces = await primary.detectAndEmbed(input.imageUrl);
+    } catch (e) {
+      this.log.warn(
+        `scratch extract failed; fallback to mock: ${(e as Error).message}`,
+      );
+      const mock = new MockFaceProvider();
+      faces = await mock.detectAndEmbed(input.imageUrl);
+      providerName = 'mock';
+    }
+    const chosen = pickLargest(faces);
+    await this.sdi.update(
+      { id: targetId, userId },
+      {
+        embedding: chosen ? chosen.vector : null,
+        bbox: chosen?.bbox ?? null,
+        provider: providerName,
+        model: 'auto',
+        qualityScore: chosen?.confidence ?? null,
+        isProcessed: chosen !== null,
+        error: chosen ? null : 'no_face_detected',
+      },
+    );
+    if (chosen) {
+      await this.sdInc(input.dumpId, userId);
+    } else {
+      await this.sdFail(input.dumpId, userId);
+    }
+    return {
+      provider: providerName,
+      faces: chosen ? 1 : 0,
+      durationMs: Date.now() - startedAt,
+    };
+  }
+
+  private async sdInc(dumpId: string, userId: string): Promise<void> {
+    await this.sd.increment({ id: dumpId, userId }, 'doneItems', 1);
+  }
+
+  private async sdFail(dumpId: string, userId: string): Promise<void> {
+    await this.sd.increment({ id: dumpId, userId }, 'failedItems', 1);
   }
 
   /**
