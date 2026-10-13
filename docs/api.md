@@ -290,6 +290,40 @@ Response: `{ "data": { "shareToken": "abc123..." } }`
 
 ---
 
+## Faces `/api/faces` (v1.1)
+
+v1.1 个人画像 API：一用户一 self 档案；pgvector 余弦 ANN；mock provider 默认，cloud/local 通过 `FACE_PROVIDER` 切换。
+
+| Method | Path | 说明 |
+|---|---|---|
+| GET    | /api/faces/me                  | 取本用户 self profile 概览（含 enabled references + 命中统计） |
+| POST   | /api/faces/me/references       | 添加参考图 `{ imageUrl, bboxHint? }` → `{ refId, jobId }`（后端异步 extract embedding） |
+| DELETE | /api/faces/me/references/:id   | 删除参考 |
+| PATCH  | /api/faces/me/references/:id   | 启停参考 `{ enabled: bool }` |
+| POST   | /api/faces/search              | `{ threshold?, topK? }` → 命中数组（cosine distance + moment info） |
+| POST   | /api/faces/moments/:id/extract | 给单张 moment 异步提取人脸 → `{ jobId }` |
+| POST   | /api/faces/backfill            | 一次性回填本人所有未提取的 photo moments（IIFE 跑在内存） |
+| GET    | /api/faces/backfill/status     | 回填进度 `{ total, done, failed, inProgress }` |
+
+### `/api/faces/dumps/*`（v1.1 临时检索）
+
+scratch dump 子模块（照片不进库）：临时上传一批 → 人脸提取 → 检索。
+
+| Method | Path | 说明 |
+|---|---|---|
+| POST   | /api/faces/dumps                    | 新建 dump `{ name, description? }` → `{ dumpId }` |
+| GET    | /api/faces/dumps                    | 列本人 dump（?limit=） |
+| GET    | /api/faces/dumps/:id                | 单个 dump 详情 |
+| DELETE | /api/faces/dumps/:id                | 删除 dump（CASCADE items） |
+| POST   | /api/faces/dumps/:id/photos         | 加一张照片 `{ imageUrl, takenAt?, fileMtime?, filename?, width?, height? }` |
+| GET    | /api/faces/dumps/:id/items          | 列出 dump 内照片（?status=pending|processed|failed） |
+| GET    | /api/faces/dumps/:id/status         | 进度 `{ total, done, failed, status: 'created'\|'processing'\|'done'\|'failed' }`（status='processing' 时建议 1s 轮询） |
+| POST   | /api/faces/dumps/:id/search         | 检索命中 `{ threshold?, topK? }` → hit 数组（item + distance + sortKey + sortValue） |
+
+> 命中 sortKey 优先 `takenAt` → fallback `fileMtime` → 最后 `uploadedAt`；结果按 sortValue 倒序。
+
+---
+
 ## License `/api/license`
 
 ### `GET /license`

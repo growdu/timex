@@ -30,6 +30,7 @@
 | 时间线 Rich 化 | ✓ | 替换简单列表为带 cover 渐变的 RichTimeline |
 | 首页 FAB 快速操作 | ✓ | 浮动按钮 + 心情小部件 |
 | PlacePage / PersonPage / EventPage mini 可视化 | ✓ | 小尺寸地图 / 关系图嵌入 hero 下 |
+| **个人画像（face profile，v1.1）** | ✓ | pgvector + AI jobs + 单 self 档案；永久检索 `/faces`（三 Tab 结果视图）+ 临时检索 `/faces/dumps` |
 
 ## 文档（本轮）
 

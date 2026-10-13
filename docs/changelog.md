@@ -1,5 +1,45 @@
 # 变更日志
 
+## [v1.1.0] — 2026-10-13
+
+> 🎯 **个人画像** v1.1 — 上传本人正脸照，让系统自动找出所有出现过你的照片（pgvector 余弦 ANN）。
+
+### 新增
+
+- **后端 · Face Module**：4 张表（`user_face_embeddings` / `moment_faces` / `scratch_dumps` / `scratch_dump_items`）+ 3 个 `ivfflat` 向量索引 + pgvector 0.5+ 依赖
+- **后端 · Provider 抽象**：`FaceProvider` 接口 + 默认 `MockFaceProvider` + `CloudFaceProvider`（外部 embedding API）+ `LocalFaceProvider`（本地模型占位）；通过 `FACE_PROVIDER` 环境变量切换
+- **后端 · 自档案检索**：`POST /api/faces/me/references` 添加参考图 → 后台 async embed；`POST /api/faces/search` 余弦 ANN 命中本人所有 moments
+- **后端 · 单条提取**：在 EventPage 上点「✨ 提取人脸」按钮触发 `POST /api/faces/moments/:id/extract`
+- **后端 · 一次性回填**：`POST /api/faces/backfill` 把本人所有未提取的 photo moments 串行提取一遍（内存 in-process）
+- **后端 · Scratch Dump**（临时检索）：`POST /api/faces/dumps/:id/photos` 加照片 → `face-extract-scratch` AI job 提取 → `POST /api/faces/dumps/:id/search` 检索。dump status 走 `created → processing → done|failed` 自动收尾
+- **前端 · /faces 总览**：`SelfProfileCard`（增删启停参考）+ `FaceResultTabs`（时间线 / 人物 / 地点三视图）+ 6 个 hooks
+- **前端 · /faces/dumps 列表 + 新建 + 上传 + 进度**：点击 dump 卡片进入详情页，详情页可继续追加 + 触发「✨ 过滤」渲染 `DumpTimelineView`（按年分组）
+- **前端 · Moment 提取按钮**：在 EventPage 上每张照片下方挂一颗「✨ 提取人脸」按钮（`EventMomentsSection`）
+
+### 变更
+
+- 数据库 schema：`scripts/migrations/2026_10_12_face_profile.sql` 必须先执行；`FaceJobHandler` 拓展 3 种 AI job kind（`face-embed` / `face-extract` / `face-extract-scratch`）
+- 环境变量：`FACE_PROVIDER`（默认 `mock`），可选 `FACE_CLOUD_URL` / `FACE_CLOUD_KEY` / `FACE_CLOUD_MODEL`
+- 配置常量：DI token `FACE_CONFIG`（避免硬编码）
+
+### 已知 / 已记录（deferred）
+
+- **不做**多档案管理（每位用户仅一份 self 档案）— 用户决策
+- **不做** person 实体 face profile（"帮我找张三的某张照片"）— 用户决策
+- 启动时 `startBackfill` 是在内存 IIFE，不跨多实例 / 重启；建议生产用单独 worker — 后续迭代加 `@nestjs/bullmq`
+
+### 测试
+
+- 后端：`scripts/migrations/...` 之外新增 91 个单测（覆盖 FaceProvider 三种实现 / VectorSearchService / FaceService / ScratchDumpService / FaceJobHandler + 集成测试）
+- 前端：291 个单测（adapters / hooks / components / pages）
+
+### 安全 & 多租户
+
+- 所有 4 张表带 `user_id`；Service 层强制过滤，不暴露他人资源
+- 临时 dump 完全隔离在本人 `user_id` 命名空间下；删除 dump CASCADE 清空 items
+
+---
+
 ## [v0.1.0] — 2026-07-10
 
 > 🎉 **首个公开版本** — 个人成长记录与人生回忆沉淀系统。
