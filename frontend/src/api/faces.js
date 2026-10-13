@@ -24,4 +24,28 @@ export const facesApi = {
   extractFaces:    (momentId)                => client.post(`/faces/moments/${momentId}/extract`).then(r => r.data),
 };
 
+/**
+ * Scratch Dump API（与后端 ScratchDumpController 对齐）。
+ *
+ * 用户上传一批照片做临时检索的场景（不进 moment 库）：
+ *   POST   /faces/dumps                  — 新建 dump（{ name, description? }）
+ *   GET    /faces/dumps                  — 列出本人 dump（?limit=）
+ *   GET    /faces/dumps/:id              — 单个 dump 详情
+ *   DELETE /faces/dumps/:id              — 删除 dump
+ *   POST   /faces/dumps/:id/photos       — 加一张照片（{ imageUrl, takenAt?, fileMtime?, filename?, width?, height? }）
+ *   GET    /faces/dumps/:id/items        — 列出 dump 内照片（?status=pending|processed|failed）
+ *   GET    /faces/dumps/:id/status       — { total, done, failed, status } 进度
+ *   POST   /faces/dumps/:id/search       — 检索命中（{ threshold?, topK? }）
+ */
+export const scratchDumpsApi = {
+  create:    (body)                       => client.post('/faces/dumps', body).then(r => r.data),
+  list:      (limit = 50)                 => client.get('/faces/dumps', { params: { limit } }).then(r => r.data),
+  get:       (id)                         => client.get(`/faces/dumps/${id}`).then(r => r.data),
+  remove:    (id)                         => client.delete(`/faces/dumps/${id}`).then(r => r.data),
+  addItem:   (id, body)                   => client.post(`/faces/dumps/${id}/photos`, body).then(r => r.data),
+  listItems: (id, status)                 => client.get(`/faces/dumps/${id}/items`, { params: status ? { status } : {} }).then(r => r.data),
+  status:    (id)                         => client.get(`/faces/dumps/${id}/status`).then(r => r.data),
+  search:    (id, body)                   => client.post(`/faces/dumps/${id}/search`, body).then(r => r.data),
+};
+
 export default facesApi;
