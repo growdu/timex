@@ -6,6 +6,7 @@ vi.mock('../api/upload', () => ({
   uploadApi: {
     presign:    vi.fn(),
     uploadToUrl: vi.fn(),
+    complete:   vi.fn(),
   },
 }));
 vi.mock('../api/faces', () => ({
@@ -29,15 +30,21 @@ function makeFakeFile(name = 'a.jpg', size = 100, type = 'image/jpeg') {
 describe('DumpUploader', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    uploadApi.presign.mockResolvedValue({ url: 'https://oss.example/key', key: 'key' });
+    uploadApi.presign.mockResolvedValue({ url: 'https://oss.example/presigned/key', key: 'key' });
     uploadApi.uploadToUrl.mockResolvedValue();
+    uploadApi.complete.mockResolvedValue({
+      key: 'key',
+      url: 'https://cdn.example/permanent/key',
+      fileSize: 100,
+      contentType: 'image/jpeg',
+    });
     scratchDumpsApi.addItem.mockResolvedValue({ itemId: 'item-1', jobId: 'job-1' });
   });
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it('runs presign → uploadToUrl → addItem in order for one file', async () => {
+  it('runs presign → uploadToUrl → complete → addItem in order for one file', async () => {
     const onItemAdded = vi.fn();
     const onAllDone = vi.fn();
     const file = makeFakeFile('a.jpg');
@@ -50,6 +57,7 @@ describe('DumpUploader', () => {
 
     await waitFor(() => expect(uploadApi.presign).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(uploadApi.uploadToUrl).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(uploadApi.complete).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(scratchDumpsApi.addItem).toHaveBeenCalledTimes(1));
 
     expect(uploadApi.presign).toHaveBeenCalledWith({
@@ -59,11 +67,17 @@ describe('DumpUploader', () => {
     });
 
     const [url, uploadedFile] = uploadApi.uploadToUrl.mock.calls[0];
-    expect(url).toBe('https://oss.example/key');
+    expect(url).toBe('https://oss.example/presigned/key');
     expect(uploadedFile).toBe(file);
 
+    // complete() must receive the key from presign
+    expect(uploadApi.complete).toHaveBeenCalledWith(
+      expect.objectContaining({ key: 'key' }),
+    );
+
+    // addItem must use the permanent URL from complete(), NOT the presigned PUT URL
     expect(scratchDumpsApi.addItem).toHaveBeenCalledWith('dump-1', {
-      imageUrl: 'https://oss.example/key',
+      imageUrl: 'https://cdn.example/permanent/key',
       filename: 'a.jpg',
     });
 
@@ -89,7 +103,28 @@ describe('DumpUploader', () => {
     const [results] = onAllDone.mock.calls[0];
     expect(results[0].ok).toBe(false);
     expect(results[0].error.message).toBe('net fail');
-    // addItem not called since uploadToUrl threw
+    // complete / addItem not called since uploadToUrl threw
+    expect(uploadApi.complete).not.toHaveBeenCalled();
+    expect(scratchDumpsApi.addItem).not.toHaveBeenCalled();
+  });
+
+  it('marks file as error when complete throws (uploadToUrl succeeded)', async () => {
+    uploadApi.complete.mockRejectedValueOnce(new Error('complete failed'));
+    const onAllDone = vi.fn();
+    const file = makeFakeFile('mid.jpg');
+
+    render(<DumpUploader dumpId="dump-mid" onAllDone={onAllDone} />);
+
+    fireEvent.change(screen.getByTestId('dump-uploader-input'), {
+      target: { files: [file] },
+    });
+
+    await waitFor(() => expect(onAllDone).toHaveBeenCalledTimes(1));
+    const [results] = onAllDone.mock.calls[0];
+    expect(results[0].ok).toBe(false);
+    expect(results[0].error.message).toBe('complete failed');
+    // uploadToUrl ran but complete failed, so addItem is never called
+    expect(uploadApi.uploadToUrl).toHaveBeenCalledTimes(1);
     expect(scratchDumpsApi.addItem).not.toHaveBeenCalled();
   });
 

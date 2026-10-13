@@ -6,9 +6,10 @@ import { scratchDumpsApi } from '../api/faces';
  * DumpUploader — 上传一张/批照片到指定 scratch dump。
  *
  * 流程（串行，每张文件独立进度回调）：
- *   1) client.post('/upload/sign', { kind:'photo', mimeType, fileSize }) 拿 url + key
- *   2) PUT 到 OSS（XHR，可读 0-100 进度）
- *   3) scratchDumpsApi.addItem(dumpId, { imageUrl, takenAt?, fileMtime?, filename?, width?, height? })
+ *   1) uploadApi.presign()      拿签名 PUT url + key
+ *   2) uploadApi.uploadToUrl()  PUT 到 OSS（XHR，可读 0-100 进度）
+ *   3) uploadApi.complete()     后端校验 + 返回 permanent URL（签名 15min 过期后会 403，所以不能用 presigned url 持久化）
+ *   4) scratchDumpsApi.addItem(dumpId, { imageUrl: <permanent>, filename? })
  *
  * props:
  *   - dumpId    : string  目标 dump id
@@ -58,9 +59,15 @@ export function DumpUploader({ dumpId, onItemAdded, onAllDone }) {
 
         markItem(itemKey, { status: 'registering', percent: 100 });
 
-        // 3) 注册到 dump
+        // 3) 通知后端完成 → 拿到 permanent URL（不能直接用 presigned.url，它 15min 后会 403）
+        const completed = await uploadApi.complete({
+          key: presigned.key,
+          filename: file.name,
+        });
+
+        // 4) 注册到 dump（用 permanent URL）
         const created = await scratchDumpsApi.addItem(dumpId, {
-          imageUrl: presigned.url,
+          imageUrl: completed.url,
           filename: file.name,
         });
 
