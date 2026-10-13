@@ -34,7 +34,9 @@ export class CloudFaceProvider implements FaceProvider {
       ),
     );
     return res.data.faces.map((f) => ({
-      bbox: f.bbox, vector: f.embedding, confidence: f.confidence,
+      bbox: f.bbox,
+      vector: f.embedding,
+      confidence: f.confidence,
     }));
   }
 
@@ -49,6 +51,10 @@ export class CloudFaceProvider implements FaceProvider {
         },
       ),
     );
-    return { bbox: bboxHint, vector: res.data.embedding, confidence: res.data.confidence };
+    return {
+      bbox: bboxHint,
+      vector: res.data.embedding,
+      confidence: res.data.confidence,
+    };
   }
 }

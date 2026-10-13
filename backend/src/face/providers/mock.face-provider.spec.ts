@@ -27,7 +27,12 @@ describe('MockFaceProvider', () => {
   });
 
   it('embedFace respects bbox hint', async () => {
-    const fe = await p.embedFace('https://example.com/a.jpg', { x: 0.1, y: 0.2, w: 0.3, h: 0.4 });
+    const fe = await p.embedFace('https://example.com/a.jpg', {
+      x: 0.1,
+      y: 0.2,
+      w: 0.3,
+      h: 0.4,
+    });
     expect(fe.bbox).toEqual({ x: 0.1, y: 0.2, w: 0.3, h: 0.4 });
     expect(fe.vector).toHaveLength(FACE_VECTOR_DIM);
   });

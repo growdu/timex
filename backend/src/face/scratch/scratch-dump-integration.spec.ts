@@ -27,16 +27,19 @@ describe('ScratchDumpController (integration)', () => {
       .fn()
       .mockResolvedValue({ id: 'd1', name: 'trip', status: 'created' }),
     remove: jest.fn().mockResolvedValue(undefined),
-    addItem: jest
-      .fn()
-      .mockResolvedValue({ itemId: 'i1', jobId: 'j1' }),
+    addItem: jest.fn().mockResolvedValue({ itemId: 'i1', jobId: 'j1' }),
     listItems: jest.fn().mockResolvedValue([{ id: 'i1' }]),
     getStatus: jest
       .fn()
       .mockResolvedValue({ total: 0, done: 0, failed: 0, status: 'created' }),
-    searchDump: jest
-      .fn()
-      .mockResolvedValue([{ item: { id: 'i1' }, distance: 0.1, sortKey: 'takenAt', sortValue: 'x' }]),
+    searchDump: jest.fn().mockResolvedValue([
+      {
+        item: { id: 'i1' },
+        distance: 0.1,
+        sortKey: 'takenAt',
+        sortValue: 'x',
+      },
+    ]),
   };
 
   beforeAll(async () => {

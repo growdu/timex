@@ -31,7 +31,9 @@ export class LocalFaceProvider implements FaceProvider {
       ),
     );
     return res.data.faces.map((f) => ({
-      bbox: f.bbox, vector: f.embedding, confidence: f.confidence,
+      bbox: f.bbox,
+      vector: f.embedding,
+      confidence: f.confidence,
     }));
   }
 
@@ -43,6 +45,10 @@ export class LocalFaceProvider implements FaceProvider {
         { timeout: this.cfg.local.timeoutMs },
       ),
     );
-    return { bbox: bboxHint, vector: res.data.embedding, confidence: res.data.confidence };
+    return {
+      bbox: bboxHint,
+      vector: res.data.embedding,
+      confidence: res.data.confidence,
+    };
   }
 }

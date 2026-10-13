@@ -14,7 +14,10 @@ describe('LocalFaceProvider', () => {
       providers: [
         LocalFaceProvider,
         { provide: HttpService, useValue: http },
-        { provide: FACE_CONFIG, useValue: { local: { baseUrl: 'http://svc:8000', timeoutMs: 5000 } } },
+        {
+          provide: FACE_CONFIG,
+          useValue: { local: { baseUrl: 'http://svc:8000', timeoutMs: 5000 } },
+        },
       ],
     }).compile();
     p = mod.get(LocalFaceProvider);

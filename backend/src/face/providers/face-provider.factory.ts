@@ -22,12 +22,19 @@ export class FaceProviderFactory {
     if (this._instance) return this._instance;
     let p: FaceProvider;
     switch (this.cfg.provider) {
-      case 'cloud': p = this.cloud; break;
-      case 'local': p = this.local; break;
+      case 'cloud':
+        p = this.cloud;
+        break;
+      case 'local':
+        p = this.local;
+        break;
       case 'mock':
-      default:      p = this.mock;
+      default:
+        p = this.mock;
     }
-    this.log.log(`FaceProvider resolved: ${p.name} (cfg.provider=${this.cfg.provider})`);
+    this.log.log(
+      `FaceProvider resolved: ${p.name} (cfg.provider=${this.cfg.provider})`,
+    );
     this._instance = p;
     return p;
   }

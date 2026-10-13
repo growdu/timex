@@ -52,8 +52,8 @@ function makeRepo<T extends { id: string }>() {
     }): Promise<T[]> {
       const { where, order, take } = args;
       const wheres: Array<Record<string, unknown>> = Array.isArray(where)
-        ? (where as Array<Record<string, unknown>>)
-        : [where as Record<string, unknown>];
+        ? where
+        : [where];
       const arr = Array.from(map.values()).filter((v) =>
         wheres.some((w) => matchRow(v, w)),
       );
@@ -71,7 +71,10 @@ function makeRepo<T extends { id: string }>() {
       }
       return typeof take === 'number' ? arr.slice(0, take) : arr;
     },
-    async delete(args: { id: string; userId: string }): Promise<{ affected: number }> {
+    async delete(args: {
+      id: string;
+      userId: string;
+    }): Promise<{ affected: number }> {
       const v = map.get(args.id);
       if (v && (v as Record<string, unknown>).userId === args.userId) {
         map.delete(args.id);
@@ -185,8 +188,8 @@ describe('ScratchDumpService', () => {
       const d = await svc.create('u1', { name: 'd' });
       sdi.save = jest
         .fn()
-        .mockRejectedValueOnce({ code: '23505' } as never)
-        .mockResolvedValueOnce({ id: 'i2' } as never);
+        .mockRejectedValueOnce({ code: '23505' })
+        .mockResolvedValueOnce({ id: 'i2' });
       svc = new ScratchDumpService(
         sd as never,
         sdi as never,
@@ -203,7 +206,7 @@ describe('ScratchDumpService', () => {
     it('passes through non-23505 errors unchanged', async () => {
       const d = await svc.create('u1', { name: 'd' });
       const err = Object.assign(new Error('disk full'), { code: 'XX001' });
-      sdi.save = jest.fn().mockRejectedValueOnce(err as never);
+      sdi.save = jest.fn().mockRejectedValueOnce(err);
       svc = new ScratchDumpService(
         sd as never,
         sdi as never,
@@ -229,7 +232,9 @@ describe('ScratchDumpService', () => {
       };
       await svc.addItem('u1', d.id, dto);
       // 走的是 this.sdi.create → save 链路；最后一次 create 调用就是这次
-      const lastCreateCallArgs = (sdi.create as jest.Mock).mock.calls.at(-1)![0];
+      const lastCreateCallArgs = (sdi.create as jest.Mock).mock.calls.at(
+        -1,
+      )![0];
       expect(lastCreateCallArgs.sourceUrl).toBe('https://x/2.jpg');
       expect(lastCreateCallArgs.takenAt).toBeInstanceOf(Date);
       expect(lastCreateCallArgs.fileMtime).toBeInstanceOf(Date);
@@ -271,14 +276,20 @@ describe('ScratchDumpService', () => {
         createdAt: new Date(),
       } as never);
 
-      const processed = await svc.listItems('u1', d.id, { status: 'processed' });
+      const processed = await svc.listItems('u1', d.id, {
+        status: 'processed',
+      });
       // pending 过滤 = isProcessed=false
       expect(
-        (await svc.listItems('u1', d.id, { status: 'pending' })).map((i) => i.id),
+        (await svc.listItems('u1', d.id, { status: 'pending' })).map(
+          (i) => i.id,
+        ),
       ).toEqual(['b']);
       // failed 过滤 = error IS NOT NULL
       expect(
-        (await svc.listItems('u1', d.id, { status: 'failed' })).map((i) => i.id),
+        (await svc.listItems('u1', d.id, { status: 'failed' })).map(
+          (i) => i.id,
+        ),
       ).toEqual(['c']);
       // processed = isProcessed=true
       expect(processed.map((i) => i.id).sort()).toEqual(['a', 'c']);
@@ -331,7 +342,7 @@ describe('ScratchDumpService', () => {
         height: null,
         fileSize: null,
         thumbnailUrl: null,
-      } as never);
+      });
       sdi._map.set('new', {
         id: 'new',
         userId: 'u1',
@@ -352,7 +363,7 @@ describe('ScratchDumpService', () => {
         height: null,
         fileSize: null,
         thumbnailUrl: null,
-      } as never);
+      });
       const out = await svc.searchDump('u1', d.id);
       // 按 sortValue 降序：new (2024-06) 排在 old (2024-01) 之前
       expect(out.map((h) => h.item.id)).toEqual(['new', 'old']);
@@ -397,7 +408,7 @@ describe('ScratchDumpService', () => {
         height: null,
         fileSize: null,
         thumbnailUrl: null,
-      } as never);
+      });
       const out = await svc.searchDump('u1', d.id);
       expect(out).toHaveLength(1);
       expect(out[0].item.id).toBe('present');

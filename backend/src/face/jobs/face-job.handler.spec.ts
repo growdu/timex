@@ -39,7 +39,10 @@ describe('FaceJobHandler', () => {
         { provide: getRepositoryToken(MomentFace), useValue: mf },
         { provide: getRepositoryToken(ScratchDump), useValue: sd },
         { provide: getRepositoryToken(ScratchDumpItem), useValue: sdi },
-        { provide: FACE_CONFIG, useValue: { provider: 'mock', cloud: {}, local: {}, search: {} } },
+        {
+          provide: FACE_CONFIG,
+          useValue: { provider: 'mock', cloud: {}, local: {}, search: {} },
+        },
         FaceProviderFactory,
         MockFaceProvider,
         { provide: 'CloudFaceProvider', useValue: {} },
@@ -48,7 +51,12 @@ describe('FaceJobHandler', () => {
     })
       .overrideProvider(FaceProviderFactory)
       .useFactory({
-        factory: (cfg: unknown, cloud: unknown, local: unknown, mock: MockFaceProvider) => {
+        factory: (
+          cfg: unknown,
+          cloud: unknown,
+          local: unknown,
+          mock: MockFaceProvider,
+        ) => {
           // Build a factory whose resolve() returns mock so handler uses MockFaceProvider.
           const f = Object.create(FaceProviderFactory.prototype);
           f.cfg = cfg;
@@ -59,7 +67,12 @@ describe('FaceJobHandler', () => {
           f.resolve = () => mock;
           return f;
         },
-        inject: [FACE_CONFIG, 'CloudFaceProvider', 'LocalFaceProvider', MockFaceProvider],
+        inject: [
+          FACE_CONFIG,
+          'CloudFaceProvider',
+          'LocalFaceProvider',
+          MockFaceProvider,
+        ],
       })
       .compile();
     h = mod.get(FaceJobHandler);
@@ -176,7 +189,9 @@ describe('FaceJobHandler', () => {
     });
     expect(sd.query).toHaveBeenCalledTimes(1);
     const [sql, params] = sd.query.mock.calls[0];
-    expect(sql).toMatch(/CASE WHEN failed_items > 0 THEN 'failed' ELSE 'done' END/);
+    expect(sql).toMatch(
+      /CASE WHEN failed_items > 0 THEN 'failed' ELSE 'done' END/,
+    );
     expect(sql).toMatch(/status = 'processing'/);
     expect(params).toEqual(['d1', 'u1']);
   });

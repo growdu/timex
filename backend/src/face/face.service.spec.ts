@@ -14,11 +14,6 @@ function mkSvc() {
     find: jest.fn(),
     create: jest.fn(),
     save: jest.fn(),
-  } as unknown as {
-    findOne: jest.Mock;
-    find: jest.Mock;
-    create: jest.Mock;
-    save: jest.Mock;
   };
   const ufe = {
     save: jest.fn(),
@@ -26,25 +21,17 @@ function mkSvc() {
     delete: jest.fn(),
     update: jest.fn(),
     create: jest.fn(),
-  } as unknown as {
-    save: jest.Mock;
-    find: jest.Mock;
-    delete: jest.Mock;
-    update: jest.Mock;
-    create: jest.Mock;
   };
   const mf = {} as never;
-  const ds = { query: jest.fn().mockResolvedValue([]) } as unknown as {
-    query: jest.Mock;
-  };
-  const factory = { resolve: jest.fn() } as unknown as { resolve: jest.Mock };
+  const ds = { query: jest.fn().mockResolvedValue([]) };
+  const factory = { resolve: jest.fn() };
   const search = {
     searchMomentsByEmbeddings: jest.fn().mockResolvedValue([]),
-  } as unknown as { searchMomentsByEmbeddings: jest.Mock };
-  const ai = { submit: jest.fn().mockResolvedValue({ id: 'job1' }) } as unknown as {
-    submit: jest.Mock;
   };
-  const cfg = { search: { backfillBatch: 2, threshold: 0.6, topK: 10 } } as never;
+  const ai = { submit: jest.fn().mockResolvedValue({ id: 'job1' }) };
+  const cfg = {
+    search: { backfillBatch: 2, threshold: 0.6, topK: 10 },
+  } as never;
   return {
     svc: new FaceService(
       moments as never,
@@ -95,9 +82,7 @@ describe('FaceService.addReference', () => {
     const { svc, ufe } = mkSvc();
     ufe.create.mockReturnValue({});
     ufe.save.mockRejectedValue({ code: '23505' });
-    await expect(
-      svc.addReference('u1', 'https://x/dup.jpg'),
-    ).rejects.toThrow();
+    await expect(svc.addReference('u1', 'https://x/dup.jpg')).rejects.toThrow();
   });
 
   it('succeeds and enqueues face-embed job', async () => {
@@ -130,9 +115,7 @@ describe('FaceService.setReferenceEnabled', () => {
   it('throws NotFound when affected=0', async () => {
     const { svc, ufe } = mkSvc();
     ufe.update.mockResolvedValue({ affected: 0 });
-    await expect(
-      svc.setReferenceEnabled('u1', 'r1', false),
-    ).rejects.toThrow();
+    await expect(svc.setReferenceEnabled('u1', 'r1', false)).rejects.toThrow();
   });
   it('updates row when exists', async () => {
     const { svc, ufe } = mkSvc();

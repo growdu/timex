@@ -38,10 +38,7 @@ export class ScratchDumpController {
   }
 
   @Get()
-  list(
-    @CurrentUser() u: User,
-    @Query('limit') limit?: string,
-  ) {
+  list(@CurrentUser() u: User, @Query('limit') limit?: string) {
     return this.svc.list(u.id, limit ? Number(limit) : 50);
   }
 
