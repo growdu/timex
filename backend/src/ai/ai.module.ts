@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AiJob } from './entities/ai-job.entity';
@@ -8,9 +8,14 @@ import { OllamaProvider } from './providers/ollama.provider';
 import { OpenAIProvider } from './providers/openai.provider';
 import { MockProvider } from './providers/mock.provider';
 import { AiRouterProvider } from './providers/ai-router.provider';
+import { FaceModule } from '../face/face.module';
 
 @Module({
-  imports: [ConfigModule, TypeOrmModule.forFeature([AiJob])],
+  imports: [
+    ConfigModule,
+    TypeOrmModule.forFeature([AiJob]),
+    forwardRef(() => FaceModule),
+  ],
   controllers: [AiController],
   providers: [
     AiService,

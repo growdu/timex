@@ -12,6 +12,7 @@ import { AiService } from './ai.service';
 import { AiJob } from './entities/ai-job.entity';
 import { AiRouterProvider } from './providers/ai-router.provider';
 import { MockProvider } from './providers/mock.provider';
+import { FaceJobHandler } from '../face/jobs/face-job.handler';
 
 /** in-memory AiJob repo：支持本次测试用到的方法 */
 function makeJobRepo() {
@@ -73,16 +74,23 @@ describe('AiService', () => {
   beforeEach(async () => {
     repo = makeJobRepo();
     mock = new MockProvider();
+    const faceHandler = {
+      runEmbed: jest.fn().mockResolvedValue({ provider: 'mock' }),
+      runExtract: jest.fn().mockResolvedValue({ provider: 'mock', faces: 0 }),
+    };
     const moduleRef = await Test.createTestingModule({
       providers: [
         AiService,
         { provide: getRepositoryToken(AiJob), useValue: repo },
         { provide: AiRouterProvider, useValue: mock },
+        { provide: FaceJobHandler, useValue: faceHandler },
       ],
     }).compile();
     service = moduleRef.get(AiService);
     // 直接把 service 的 llm 替换为 MockProvider（不依赖 router 配置）
     (service as any).llm = mock;
+    // 直接把 faceHandler 替换为 stub（不依赖 face module）
+    (service as any).faceHandler = faceHandler;
   });
 
   it('submit creates a job; background runJob completes with mock provider', async () => {

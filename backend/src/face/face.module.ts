@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { FACE_CONFIG, loadFaceConfig } from '../config/face.config';
@@ -10,11 +10,16 @@ import { FaceProviderFactory } from './providers/face-provider.factory';
 import { LocalFaceProvider } from './providers/local.face-provider';
 import { MockFaceProvider } from './providers/mock.face-provider';
 import { VectorSearchService } from './search/vector-search.service';
+import { FaceJobHandler } from './jobs/face-job.handler';
+import { FaceService } from './face.service';
+import { FaceController } from './face.controller';
+import { AiModule } from '../ai/ai.module';
 
 @Module({
   imports: [
     HttpModule,
     TypeOrmModule.forFeature([Moment, UserFaceEmbedding, MomentFace]),
+    forwardRef(() => AiModule),
   ],
   providers: [
     { provide: FACE_CONFIG, useFactory: loadFaceConfig },
@@ -23,7 +28,10 @@ import { VectorSearchService } from './search/vector-search.service';
     LocalFaceProvider,
     FaceProviderFactory,
     VectorSearchService,
+    FaceService,
+    FaceJobHandler,
   ],
-  exports: [FaceProviderFactory],
+  controllers: [FaceController],
+  exports: [FaceProviderFactory, FaceService, FaceJobHandler],
 })
 export class FaceModule {}

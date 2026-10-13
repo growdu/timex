@@ -1,9 +1,16 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AiJob, AiJobKind, AiJobTargetType } from './entities/ai-job.entity';
 import { AiRouterProvider } from './providers/ai-router.provider';
 import { LlmCompletionRequest } from './providers/llm-provider.interface';
+import { FaceJobHandler } from '../face/jobs/face-job.handler';
 
 export interface SubmitAiJobInput {
   userId: string;
@@ -21,6 +28,8 @@ export class AiService {
     @InjectRepository(AiJob)
     private repo: Repository<AiJob>,
     private llm: AiRouterProvider,
+    @Inject(forwardRef(() => FaceJobHandler))
+    private faceHandler: FaceJobHandler,
   ) {}
 
   /** 提交一个异步任务（立即返回 job，前台 / 后台 worker 调 runJob 处理） */
@@ -69,8 +78,16 @@ export class AiService {
     await this.repo.update(jobId, { status: 'running' });
 
     try {
+      // face-* 任务不走 LLM，直接调 FaceJobHandler
+      if (job.kind === 'face-embed' || job.kind === 'face-extract') {
+        await this.applyToTarget(job, '', null, promptInput);
+        job.status = 'succeeded';
+        await this.repo.save(job);
+        return job;
+      }
+
       const res = await this.llm.complete({
-        task: job.kind,
+        task: job.kind as LlmCompletionRequest['task'],
         input: promptInput,
       });
 
@@ -87,7 +104,7 @@ export class AiService {
       await this.repo.save(job);
 
       // 副作用：把结果写回 target 实体
-      await this.applyToTarget(job, res.output, res.structured);
+      await this.applyToTarget(job, res.output, res.structured, promptInput);
 
       return job;
     } catch (e) {
@@ -117,6 +134,7 @@ export class AiService {
     job: AiJob,
     output: string,
     structured: unknown,
+    promptInput: LlmCompletionRequest['input'],
   ): Promise<void> {
     switch (job.kind) {
       case 'image-tag': {
@@ -166,6 +184,23 @@ export class AiService {
           `UPDATE events SET summary = $1, updated_at = NOW() WHERE id = $2 AND user_id = $3`,
           [output, job.targetId, job.userId],
         );
+        break;
+      }
+      case 'face-embed': {
+        const inp = promptInput as unknown as {
+          imageUrl: string;
+          refId: string;
+          bboxHint?: { x: number; y: number; w: number; h: number };
+        };
+        await this.faceHandler.runEmbed(job.userId, job.targetId, inp);
+        break;
+      }
+      case 'face-extract': {
+        const inp = promptInput as unknown as {
+          momentId: string;
+          imageUrl: string;
+        };
+        await this.faceHandler.runExtract(job.userId, job.targetId, inp);
         break;
       }
     }

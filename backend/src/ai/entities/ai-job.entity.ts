@@ -13,10 +13,18 @@ export type AiJobKind =
   | 'audio-transcribe'
   | 'memoir-summary'
   | 'chapter-summary'
-  | 'event-summary';
+  | 'event-summary'
+  | 'face-embed'
+  | 'face-extract';
 
 export type AiJobStatus = 'queued' | 'running' | 'succeeded' | 'failed';
-export type AiJobTargetType = 'moment' | 'memoir' | 'chapter' | 'event';
+export type AiJobTargetType =
+  | 'moment'
+  | 'memoir'
+  | 'chapter'
+  | 'event'
+  | 'face_reference'
+  | 'face_match';
 
 @Entity('ai_jobs')
 @Index(['userId', 'status'])
