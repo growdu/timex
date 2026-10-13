@@ -29,13 +29,10 @@ describe('FaceController', () => {
   });
 
   it('addRef() forwards imageUrl + bboxHint', async () => {
-    const out = await c.addRef(
-      { id: 'u1' } as never,
-      {
-        imageUrl: 'https://x/y.jpg',
-        bboxHint: { x: 0, y: 0, w: 1, h: 1 },
-      },
-    );
+    const out = await c.addRef({ id: 'u1' } as never, {
+      imageUrl: 'https://x/y.jpg',
+      bboxHint: { x: 0, y: 0, w: 1, h: 1 },
+    });
     expect(face.addReference).toHaveBeenCalledWith('u1', 'https://x/y.jpg', {
       x: 0,
       y: 0,
@@ -56,10 +53,7 @@ describe('FaceController', () => {
   });
 
   it('search() forwards threshold + topK', async () => {
-    await c.search(
-      { id: 'u1' } as never,
-      { threshold: 0.5, topK: 100 },
-    );
+    await c.search({ id: 'u1' } as never, { threshold: 0.5, topK: 100 });
     expect(face.searchMine).toHaveBeenCalledWith('u1', {
       threshold: 0.5,
       topK: 100,
@@ -78,8 +72,8 @@ describe('FaceController', () => {
     expect(out).toEqual({ status: 'running' });
   });
 
-  it('status() does not require a user', async () => {
-    const out = await c.status();
+  it('status() does not require a user', () => {
+    const out = c.status();
     expect(face.getBackfillStatus).toHaveBeenCalled();
     expect(out).toEqual({ status: 'idle' });
   });

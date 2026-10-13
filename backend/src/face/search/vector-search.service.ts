@@ -59,9 +59,12 @@ export class VectorSearchService {
        ORDER BY b.distance ASC
        LIMIT $4;
     `;
-    const rows = await this.ds.query(sql, [userId, queries, thr, k]);
-    return (rows as Array<{ momentId: string; distance: number }>)
-      .map((r) => ({ momentId: r.momentId, distance: Number(r.distance) }));
+    const rows: Array<{ momentId: string; distance: string | number }> =
+      await this.ds.query(sql, [userId, queries, thr, k]);
+    return rows.map((r) => ({
+      momentId: String(r.momentId),
+      distance: Number(r.distance),
+    }));
   }
 
   /**
@@ -101,8 +104,11 @@ export class VectorSearchService {
        ORDER BY b.distance ASC
        LIMIT $5;
     `;
-    const rows = await this.ds.query(sql, [userId, dumpId, queries, thr, k]);
-    return (rows as Array<{ itemId: string; distance: number }>)
-      .map((r) => ({ itemId: r.itemId, distance: Number(r.distance) }));
+    const rows: Array<{ itemId: string; distance: string | number }> =
+      await this.ds.query(sql, [userId, dumpId, queries, thr, k]);
+    return rows.map((r) => ({
+      itemId: String(r.itemId),
+      distance: Number(r.distance),
+    }));
   }
 }

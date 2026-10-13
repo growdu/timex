@@ -1,7 +1,10 @@
 import { createHash } from 'crypto';
 import { Injectable } from '@nestjs/common';
 import {
-  BBox, FACE_VECTOR_DIM, FaceEmbedding, FaceProvider,
+  BBox,
+  FACE_VECTOR_DIM,
+  FaceEmbedding,
+  FaceProvider,
 } from './face-provider.interface';
 
 function deterministicVector(seed: string): number[] {
@@ -18,19 +21,23 @@ function deterministicVector(seed: string): number[] {
 export class MockFaceProvider implements FaceProvider {
   readonly name = 'mock' as const;
 
-  async detectAndEmbed(imageUrl: string): Promise<FaceEmbedding[]> {
-    return [{
-      bbox: { x: 0, y: 0, w: 1, h: 1 },
-      vector: deterministicVector(imageUrl),
-      confidence: 1,
-    }];
+  detectAndEmbed(imageUrl: string): Promise<FaceEmbedding[]> {
+    return Promise.resolve([
+      {
+        bbox: { x: 0, y: 0, w: 1, h: 1 },
+        vector: deterministicVector(imageUrl),
+        confidence: 1,
+      },
+    ]);
   }
 
-  async embedFace(imageUrl: string, bboxHint: BBox): Promise<FaceEmbedding> {
-    return {
+  embedFace(imageUrl: string, bboxHint: BBox): Promise<FaceEmbedding> {
+    return Promise.resolve({
       bbox: bboxHint,
-      vector: deterministicVector(`${imageUrl}#${bboxHint.x},${bboxHint.y},${bboxHint.w},${bboxHint.h}`),
+      vector: deterministicVector(
+        `${imageUrl}#${bboxHint.x},${bboxHint.y},${bboxHint.w},${bboxHint.h}`,
+      ),
       confidence: 1,
-    };
+    });
   }
 }

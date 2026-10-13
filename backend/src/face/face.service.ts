@@ -8,17 +8,14 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
-import { Moment } from '../moments/moment.entity';
+import { Moment, MomentType } from '../moments/moment.entity';
 import { UserFaceEmbedding } from './entities/user-face-embedding.entity';
 import { MomentFace } from './entities/moment-face.entity';
 import type { FaceConfig } from '../config/face.config';
 import { FACE_CONFIG } from '../config/face.config';
 import { FaceProviderFactory } from './providers/face-provider.factory';
 import { BBox } from './providers/face-provider.interface';
-import {
-  MomentHit,
-  VectorSearchService,
-} from './search/vector-search.service';
+import { MomentHit, VectorSearchService } from './search/vector-search.service';
 import { AiService } from '../ai/ai.service';
 
 export interface ProfileSummary {
@@ -63,12 +60,13 @@ export class FaceService {
 
   /** 取 self profile 概览（无记录返回全 0） */
   async getMyProfile(userId: string): Promise<ProfileSummary> {
-    const rows = await this.ds.query(
-      `SELECT COUNT(*)::int AS cnt,
-              SUM(CASE WHEN is_enabled THEN 1 ELSE 0 END)::int AS enabled
-         FROM user_face_embeddings WHERE user_id = $1`,
-      [userId],
-    );
+    const rows: Array<{ cnt: string | number; enabled: string | number }> =
+      await this.ds.query(
+        `SELECT COUNT(*)::int AS cnt,
+                SUM(CASE WHEN is_enabled THEN 1 ELSE 0 END)::int AS enabled
+           FROM user_face_embeddings WHERE user_id = $1`,
+        [userId],
+      );
     const cnt = Number(rows[0]?.cnt ?? 0);
     const enabled = Number(rows[0]?.enabled ?? 0);
     return {
@@ -157,9 +155,7 @@ export class FaceService {
         const m = byId.get(h.momentId);
         return m ? { moment: m, distance: h.distance } : null;
       })
-      .filter(
-        (x): x is { moment: Moment; distance: number } => x !== null,
-      );
+      .filter((x): x is { moment: Moment; distance: number } => x !== null);
   }
 
   /** 单张 moment 入队 face-extract */
@@ -169,7 +165,7 @@ export class FaceService {
   ): Promise<{ jobId: string }> {
     const m = await this.moments.findOne({ where: { id: momentId, userId } });
     if (!m) throw new NotFoundException('moment not found');
-    if (m.type !== 'photo') {
+    if (m.type !== MomentType.PHOTO) {
       throw new NotFoundException('moment is not a photo');
     }
     const job = await this.ai.submit({
@@ -184,13 +180,13 @@ export class FaceService {
 
   /** 一次性回填：本用户所有 photo 中尚未提取过 face 的 moment */
   async startBackfill(userId: string): Promise<BackfillStatus> {
-    const rows = await this.ds.query(
+    const rows: Array<{ id: string }> = await this.ds.query(
       `SELECT m.id FROM moments m
         LEFT JOIN moment_faces mf ON mf.moment_id = m.id
         WHERE m.user_id = $1 AND m.type = 'photo' AND mf.id IS NULL`,
       [userId],
     );
-    const ids = rows.map((r: { id: string }) => r.id);
+    const ids: string[] = rows.map((r) => r.id);
     this.backfill = {
       total: ids.length,
       processed: 0,

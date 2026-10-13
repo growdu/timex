@@ -11,39 +11,33 @@ import { FaceService } from './face.service';
 describe('FaceController (integration)', () => {
   let app: INestApplication;
   const svc = {
-    getMyProfile: jest
-      .fn()
-      .mockResolvedValue({
-        userId: 'u1',
-        referenceCount: 0,
-        enabledCount: 0,
-        hasProfile: false,
-      }),
+    getMyProfile: jest.fn().mockResolvedValue({
+      userId: 'u1',
+      referenceCount: 0,
+      enabledCount: 0,
+      hasProfile: false,
+    }),
     addReference: jest.fn().mockResolvedValue({ refId: 'r1', jobId: 'j1' }),
     removeReference: jest.fn().mockResolvedValue(undefined),
     setReferenceEnabled: jest.fn().mockResolvedValue(undefined),
     searchMine: jest.fn().mockResolvedValue([]),
     enqueueExtractFaces: jest.fn().mockResolvedValue({ jobId: 'j2' }),
-    startBackfill: jest
-      .fn()
-      .mockResolvedValue({
-        total: 0,
-        processed: 0,
-        failed: 0,
-        status: 'running',
-      }),
-    getBackfillStatus: jest
-      .fn()
-      .mockReturnValue({
-        total: 0,
-        processed: 0,
-        failed: 0,
-        status: 'idle',
-      }),
+    startBackfill: jest.fn().mockResolvedValue({
+      total: 0,
+      processed: 0,
+      failed: 0,
+      status: 'running',
+    }),
+    getBackfillStatus: jest.fn().mockReturnValue({
+      total: 0,
+      processed: 0,
+      failed: 0,
+      status: 'idle',
+    }),
   };
 
   // 用一个永不抛错的中间件把 request.user 设为 { id: 'u1' }，模拟 JWT 守卫效果
-  class FakeAuth {
+  class _FakeAuth {
     use(_req: any, _res: any, next: () => void) {
       return next();
     }
