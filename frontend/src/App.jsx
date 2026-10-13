@@ -18,6 +18,7 @@ import LinesPage from "./pages/LinesPage.jsx";
 import FacesPage from "./pages/FacesPage.jsx";
 import DumpsListPage from "./pages/DumpsListPage.jsx";
 import DumpNewPage from "./pages/DumpNewPage.jsx";
+import DumpDetailPage from "./pages/DumpDetailPage.jsx";
 import ExportAlbumPage from "./pages/ExportAlbumPage.jsx";
 import ExportStorybookPage from "./pages/ExportStorybookPage.jsx";
 import ExportTimelinePage from "./pages/ExportTimelinePage.jsx";
@@ -390,6 +391,15 @@ function AppContent({ user, onLogin }) {
           element={
             <ProtectedRoute>
               <DumpNewPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/faces/dumps/:id"
+          element={
+            <ProtectedRoute>
+              <DumpDetailPage />
             </ProtectedRoute>
           }
         />
