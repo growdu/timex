@@ -170,6 +170,17 @@ describe('ScratchDumpService', () => {
       expect(ds.query).toHaveBeenCalled();
     });
 
+    it('flips dump status from created to processing after enqueueing', async () => {
+      const d = await svc.create('u1', { name: 'd' });
+      await svc.addItem('u1', d.id, { imageUrl: 'https://x/1.jpg' });
+      // 最后一次 ds.query 调用应该是 status='processing' 的 UPDATE
+      const lastCall = ds.query.mock.calls.at(-1)!;
+      const [sql, params] = lastCall;
+      expect(sql).toMatch(/status\s*=\s*'processing'/);
+      expect(sql).toMatch(/status\s*=\s*'created'/); // 只在 created 时翻转
+      expect(params).toEqual([d.id, 'u1']);
+    });
+
     it('throws ConflictException when the (dump, sourceUrl) unique constraint fires', async () => {
       const d = await svc.create('u1', { name: 'd' });
       sdi.save = jest

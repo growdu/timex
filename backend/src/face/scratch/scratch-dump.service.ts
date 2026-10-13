@@ -124,6 +124,14 @@ export class ScratchDumpService {
       targetId: item.id,
       promptInput: { dumpId: d.id, imageUrl: input.imageUrl } as never,
     });
+    // 一旦入队就把 dump 置 'processing'，让前端 useDumpStatus 1s 轮询生效。
+    // 只在 'created' 时翻转，避免反复 addItem 把已收尾的 dump 拉回 'processing'。
+    await this.ds.query(
+      `UPDATE scratch_dumps
+          SET status = 'processing', updated_at = NOW()
+        WHERE id = $1 AND user_id = $2 AND status = 'created'`,
+      [d.id, userId],
+    );
     return { itemId: item.id, jobId: job.id };
   }
 

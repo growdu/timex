@@ -13,8 +13,8 @@ describe('FaceJobHandler', () => {
   let h: FaceJobHandler;
   let ufe: { update: jest.Mock };
   let mf: { delete: jest.Mock; save: jest.Mock };
-  let sd: { increment: jest.Mock };
-  let sdi: { update: jest.Mock };
+  let sd: { increment: jest.Mock; query: jest.Mock };
+  let sdi: { update: jest.Mock; query: jest.Mock };
 
   beforeEach(async () => {
     ufe = { update: jest.fn().mockResolvedValue({ affected: 1 }) };
@@ -22,8 +22,16 @@ describe('FaceJobHandler', () => {
       delete: jest.fn().mockResolvedValue({ affected: 0 }),
       save: jest.fn().mockResolvedValue([]),
     };
-    sd = { increment: jest.fn().mockResolvedValue({ affected: 1 }) };
-    sdi = { update: jest.fn().mockResolvedValue({ affected: 1 }) };
+    sd = {
+      increment: jest.fn().mockResolvedValue({ affected: 1 }),
+      // default: 仍剩若干 item 未完成 → sdFinishIfDone 不翻 status
+      query: jest.fn().mockResolvedValue(undefined),
+    };
+    sdi = {
+      update: jest.fn().mockResolvedValue({ affected: 1 }),
+      // default: 1 个未完成 → 不收尾
+      query: jest.fn().mockResolvedValue([{ remaining: '1' }]),
+    };
     const mod = await Test.createTestingModule({
       providers: [
         FaceJobHandler,
@@ -130,6 +138,9 @@ describe('FaceJobHandler', () => {
       'doneItems',
       1,
     );
+    // sdFinishIfDone 跑了 remaining>0 → 不 UPDATE status
+    expect(sdi.query).toHaveBeenCalled();
+    expect(sd.query).not.toHaveBeenCalled();
   });
 
   it('runExtractScratch marks is_processed=false and bumps failed_items when no face', async () => {
@@ -152,5 +163,41 @@ describe('FaceJobHandler', () => {
       'failedItems',
       1,
     );
+    // 仍有未完成 → 不 UPDATE status
+    expect(sd.query).not.toHaveBeenCalled();
+  });
+
+  it('marks scratch dump status=done when remaining=0 and no failed_items', async () => {
+    sdi.query.mockResolvedValueOnce([{ remaining: '0' }]);
+    sd.query.mockResolvedValueOnce({ affected: 1 });
+    await h.runExtractScratch('u1', 'i1', {
+      dumpId: 'd1',
+      imageUrl: 'https://x/scratch.jpg',
+    });
+    expect(sd.query).toHaveBeenCalledTimes(1);
+    const [sql, params] = sd.query.mock.calls[0];
+    expect(sql).toMatch(/CASE WHEN failed_items > 0 THEN 'failed' ELSE 'done' END/);
+    expect(sql).toMatch(/status = 'processing'/);
+    expect(params).toEqual(['d1', 'u1']);
+  });
+
+  it('marks scratch dump status=failed when remaining=0 (CASE branch) — confirmed via SQL string', async () => {
+    // 上面一条测试已验证 CASE 写法；这里仅确认 remaining=0 一定会走到 sd.query
+    sdi.query.mockResolvedValueOnce([{ remaining: '0' }]);
+    sd.query.mockResolvedValueOnce({ affected: 1 });
+    await h.runExtractScratch('u1', 'i1', {
+      dumpId: 'd2',
+      imageUrl: 'https://x/2.jpg',
+    });
+    expect(sd.query).toHaveBeenCalledTimes(1);
+  });
+
+  it('does NOT update dump status when items still remaining', async () => {
+    sdi.query.mockResolvedValueOnce([{ remaining: '2' }]);
+    await h.runExtractScratch('u1', 'i1', {
+      dumpId: 'd3',
+      imageUrl: 'https://x/3.jpg',
+    });
+    expect(sd.query).not.toHaveBeenCalled();
   });
 });

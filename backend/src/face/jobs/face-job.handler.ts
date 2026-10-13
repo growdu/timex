@@ -129,6 +129,7 @@ export class FaceJobHandler {
     } else {
       await this.sdFail(input.dumpId, userId);
     }
+    await this.sdFinishIfDone(input.dumpId, userId);
     return {
       provider: providerName,
       faces: chosen ? 1 : 0,
@@ -142,6 +143,31 @@ export class FaceJobHandler {
 
   private async sdFail(dumpId: string, userId: string): Promise<void> {
     await this.sd.increment({ id: dumpId, userId }, 'failedItems', 1);
+  }
+
+  /**
+   * 当 dump 下所有 items 都跑完（is_processed=true）时，把 dump.status 收尾为 'done' 或 'failed'。
+   * 任意失败 → 'failed'，全成功 → 'done'。只在 'processing' 时翻转，避免 done/failed 被倒回 processing。
+   *
+   * 用 `COUNT(*) FILTER (WHERE is_processed = false)` 单次往返判断；race-safe：每次写完即检查，
+   * 多个 job 全部完成时只有最后一个 UPDATE 会真正翻 status。
+   */
+  private async sdFinishIfDone(dumpId: string, userId: string): Promise<void> {
+    const rows: Array<{ remaining: string | number }> = await this.sdi.query(
+      `SELECT COUNT(*) FILTER (WHERE is_processed = false) AS remaining
+         FROM scratch_dump_items
+        WHERE dump_id = $1 AND user_id = $2`,
+      [dumpId, userId],
+    );
+    const remaining = Number(rows[0]?.remaining ?? 0);
+    if (remaining !== 0) return;
+    await this.sd.query(
+      `UPDATE scratch_dumps
+          SET status = CASE WHEN failed_items > 0 THEN 'failed' ELSE 'done' END,
+              updated_at = NOW()
+        WHERE id = $1 AND user_id = $2 AND status = 'processing'`,
+      [dumpId, userId],
+    );
   }
 
   /**
